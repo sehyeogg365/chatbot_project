@@ -1,0 +1,39 @@
+# Python
+*.py[cod]
+*$py.class
+*.so
+__pycache__/
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+
+# 가상환경
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 환경 설정
+.env
+.env.local
+*.env
+
+# 테스트
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# 기타
+*.log
+.DS_Store
+Thumbs.db
