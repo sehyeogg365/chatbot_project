@@ -14,6 +14,9 @@ venv/
 env/
 ENV/
 .venv
+new_env/
+*.venv
+
 
 # IDE
 .vscode/
@@ -33,10 +36,24 @@ ENV/
 htmlcov/
 *.cover
 
+# .gitignore에 추가
+echo "vectordb/chroma_db/" >> .gitignore
+
+# VS Code 설정
+.vscode/
+
+# Python 캐시
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 환경변수
+.env
+.env.local
+
 # 기타
 *.log
 .DS_Store
 Thumbs.db
 
-# .gitignore에 추가
-echo "vectordb/chroma_db/" >> .gitignore
