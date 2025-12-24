@@ -24,6 +24,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
 from search_engine import statistics
+from typing import Optional
 
 # 3. 환경변수 로드
 load_dotenv('../api_keys.txt')
@@ -220,25 +221,25 @@ def ask_question_v2_with_history(query: str, history: list = None) -> str:
 # ============================================
 # [단계 8] 테스트
 # ============================================
-print("\n" + "="*60)
-print("6️⃣ 챗봇 테스트 시작")
-print("="*60)
+# print("\n" + "="*60)
+# print("6️⃣ 챗봇 테스트 시작")
+# print("="*60)
 
-# 테스트 질문들
-test_queries = [
-    "경기도 가맹점을 알려줘",
-    "서울 음식점 찾아줘",
-    "디지털 상품권 되는 카페 알려줘"
-]
+# # 테스트 질문들
+# test_queries = [
+#     "경기도 가맹점을 알려줘",
+#     "서울 음식점 찾아줘",
+#     "디지털 상품권 되는 카페 알려줘"
+# ]
 
-for i, query in enumerate(test_queries, 1):
-    print(f"\n[질문 {i}] {query}")
-    print("-" * 60)
+# for i, query in enumerate(test_queries, 1):
+#     print(f"\n[질문 {i}] {query}")
+#     print("-" * 60)
     
-    # 체인 활용 답변
-    answer = ask_question_v1(query)
-    print(answer)
-    print()
+#     # 체인 활용 답변
+#     answer = ask_question_v1(query)
+#     print(answer)
+#     print()
 
 # ============================================
 # [단계 9] 대화형 테스트
@@ -262,6 +263,79 @@ def classify_question(query: str) -> str:
 
     return "RAG"
 
+def classify_stat_detail(query: str) -> str:
+    """
+    STAT 질문의 세부 유형 분류
+    """
+    if "비율" in query or "퍼센트" in query:
+        return "RATIO"
+
+    if any(k in query for k in ["업종", "음식점", "카페", "자전거", "안경"]):
+        return "CATEGORY"
+
+    return "COUNT"
+
+# 질문 파싱을 단일 함수로 통합
+def parse_stat_query(query: str):
+    area, category = extract_area_category(query)
+    stat_type = classify_stat_detail(query)
+    return area, category, stat_type
+
+# 갯수 세기 
+def handle_stat_count(area: str, category: Optional[str]) -> str:
+    # area = next((a for a in AREAS if a in query), None)
+    # category = next((c for c in CATEGORIES if c in query), None)
+
+    stats = statistics(df, area=area, category=category)
+    if "message" in stats:
+        return stats["message"]
+    
+    return (
+        f"{area} 지역"
+        + (f" {category} 업종의 " if category else " ")
+        + f"가맹점은 총 {stats['total_count']}개입니다."
+    )
+
+# 업종별 통계
+def handle_stat_category(area: str) -> str:
+    # area = next((a for a in AREAS if a in query), None)
+
+    stats = statistics(df, area=area)
+    top_items = stats.get("top_items", {})
+
+    if not top_items:
+        return f"{area} 지역에 업종 통계 데이터가 없습니다."
+
+    result = f"{area} 지역 주요 업종 상위 5개는 다음과 같습니다:\n"
+    for cat, cnt in top_items.items():
+        result += f"- {cat}: {cnt}개\n"
+
+    return result
+
+# 비율
+def handle_stat_ratio(area: str, category: Optional[str] = None) -> float:
+    # area, category = extract_area_category(query)
+
+    stats = statistics(df, area=area, category=category)
+
+    ratios = stats.get("region_distribution_ratio")
+
+    if not area:
+        return "비율을 알고 싶은 지역을 지정해 주세요."
+
+    if not ratios:
+        return "해당 조건에 대한 비율 정보를 계산할 수 없습니다."
+
+    # if "region_distribution_ratio" not in stats:
+    #     return "해당 조건에 대한 비율 정보를 계산할 수 없습니다."
+
+    result = f"{area} 지역 가맹점 분포 비율은 다음과 같습니다:\n"
+    for region, ratio in ratios.items():
+        result += f"- {region}: {ratio * 100:.1f}%\n"
+
+    return result
+
+
 # 통계 응답 함수
 
 import pandas as pd
@@ -269,32 +343,30 @@ df = pd.read_csv('cleaned_onnuri.csv')
 
 # 딕셔너리 기반 파싱 함수 
 AREAS = ["강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북"]
-CATEGORIES = ["자전거", "카페", "안경", "음식점", "미용", "의류"]
+CATEGORIES = ["자전거", "카페", "안경", "음식점", "미용", "의류", "커피", "한식", "기념품"]
 
 def extract_area_category(query: str):
     area = next((a for a in AREAS if a in query), None)
     category = next((c for c in CATEGORIES if c in query), None)
     return area, category
 
+# 2. 메인 질문 처리 함수
 def handle_stat_question(query: str) -> str:
     """
     통계 질문 처리 (Python이 정답을 계산)
     """
-    area, category = extract_area_category(query)
-
-    # 예시: 아주 단순 파싱 (나중에 고도화 가능)
-    # area = "경기" if "경기" in query else "서울"
-    # category = "자전거" if "자전거" in query else None
+    area, category  = extract_area_category(query)
     if not area:
-        return "지역을 지정해 주세요. 예: '경기 자전거 매장 몇 개야?'"
+        return "지역을 지정해 주세요. 예: '서울 자전거 매장 몇 개야?'"
     
-    stats = statistics(df, area=area, category=category)
-
-    return (
-        f"{area} 지역"
-        + (f" {category} 업종의 " if category else " ")
-        + f"가맹점은 총 {stats['total_count']}개입니다."
-    )
+    stat_type = classify_stat_detail(query)
+    if stat_type == "COUNT":
+        return handle_stat_count(area, category)
+    elif stat_type == "CATEGORY":
+        return handle_stat_category(area)
+    elif stat_type == "RATIO":
+        return handle_stat_ratio(area, category)
+    
 
 # n번째 질문 
 while True:
@@ -311,26 +383,3 @@ while True:
     conversation_history.append((query, answer))
 
     print("\n" + "="*60)
-
-# query1 = "서울 음식점 알려줘" # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
-# print(f"\n사용자: {query1}")
-# answer1 = ask_question_v2_with_history(query1, conversation_history)
-# print(f"챗봇: {answer1}")
-# conversation_history.append((query1, answer1))
-
-# # 두 번째 질문 (맥락 유지)
-# query2 = "그 중에 중국음식만 보여줘"
-# print(f"\n사용자: {query2}")
-# answer2 = ask_question_v2_with_history(query2, conversation_history)
-# print(f"챗봇: {answer2}")
-# conversation_history.append((query2, answer2))
-
-# # 세 번째 질문 (맥락 유지)
-# query3 = "디지털 되는 곳만"
-# print(f"\n사용자: {query3}")
-# answer3 = ask_question_v2_with_history(query3, conversation_history)
-# print(f"챗봇: {answer3}")
-
-# print("\n" + "="*60)
-# print("✅ 모든 테스트 완료!")
-# print("="*60)
