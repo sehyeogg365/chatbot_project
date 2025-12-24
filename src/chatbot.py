@@ -3,9 +3,334 @@
 내용:
 - LLM 연동
 - 질문 유형 분류 로직
-- 프롬프트 엔지니어링
+- 프롬프트 엔지니어링 (ChatPromptTemplate)
+- 체인 구성 (LCEL)
+- 출력 파서 (StrOutputParser)
 - 하이브리드 검색 테스트
 - 다양한 질문 테스트
 
 출력: 검증된 챗봇 로직
 '''
+from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
+# 1. 벡터 스토어 및 임베딩 (사용하던 것과 동일)
+from langchain_community.vectorstores import Chroma
+from langchain_openai import OpenAIEmbeddings
+# 2. LLM 및 RAG 체인 (이 부분이 핵심)
+
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+
+from search_engine import statistics
+
+# 3. 환경변수 로드
+load_dotenv('../api_keys.txt')
+
+# ============================================
+# [단계 1] 벡터 스토어 로드
+# ============================================
+print("1️⃣ 벡터 스토어 로딩 중...")
+
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
+vectorstore = Chroma(
+    persist_directory="vectordb/chroma_db", 
+    embedding_function=embeddings
+)
+
+print(f"✅ 벡터 스토어 로드 완료! (저장된 문서: {vectorstore._collection.count()}개)")
+
+# ============================================
+# [단계 2] 리트리버 생성
+# ============================================
+print("\n2️⃣ 리트리버 생성 중...")
+
+retriever = vectorstore.as_retriever(
+    search_type="mmr",  # MMR (Maximum Marginal Relevance) 검색
+    search_kwargs={
+        "k": 1000,              # 상위 1000개 검색
+        "lambda_mult": 0.7   # 다양성 vs 관련성 (0.7 = 관련성 우선)
+    }
+)
+
+print("✅ 리트리버 생성 완료!")
+
+# ============================================
+# [단계 3] LLM 초기화
+# ============================================
+print("\n3️⃣ LLM 초기화 중...")
+
+llm = ChatOpenAI(
+    model_name="gpt-3.5-turbo", 
+    temperature=0.7  # 약간의 창의성 (0=결정적, 1=창의적)
+)
+
+print("✅ LLM 초기화 완료!")
+
+# ============================================
+# [단계 4] 프롬프트 템플릿 (수업 내용 적용!)
+# ============================================
+print("\n4️⃣ 프롬프트 템플릿 생성 중...")
+
+# ChatPromptTemplate 사용 (수업에서 배운 방식)
+prompt_template = ChatPromptTemplate.from_messages([
+    ("system", """당신은 온누리상품권 가맹점 안내 전문 챗봇입니다.
+
+역할:
+- 사용자가 원하는 가맹점을 찾도록 도와줍니다
+- 검색 결과를 바탕으로 정확하고 친절하게 답변합니다
+- 결과가 많으면 범위를 좁히도록 추가 질문을 유도합니다
+
+답변 형식:
+1. 검색된 가맹점 정보를 요약합니다
+2. 주요 가맹점 3-5개를 소개합니다
+3. 필요시 추가 질문을 제안합니다
+"""),
+    ("human", """검색된 가맹점 정보:
+{context}
+
+사용자 질문: {question}
+
+위 정보를 바탕으로 답변해주세요.""")
+])
+
+print("✅ 프롬프트 템플릿 생성 완료!")
+
+# ============================================
+# [단계 5] 출력 파서 (수업 내용 적용!)
+# ============================================
+output_parser = StrOutputParser()
+
+# ============================================
+# [단계 6] RAG 체인 구성 (LCEL 패턴)
+# ============================================
+print("\n5️⃣ RAG 체인 구성 중...")
+
+def format_docs(docs):
+    """검색된 문서를 하나의 문자열로 포맷팅"""
+    return "\n\n".join([
+        f"[가맹점 {i+1}]\n{doc.page_content}" 
+        for i, doc in enumerate(docs)
+    ])
+
+# LCEL (LangChain Expression Language) 체인
+rag_chain = (
+    {
+        "context": retriever | format_docs,  # 검색 → 포맷팅
+        "question": RunnablePassthrough()     # 질문 그대로 전달
+    }
+    | prompt_template   # 프롬프트 적용
+    | llm               # LLM 호출
+    | output_parser     # 문자열로 파싱
+)
+
+print("✅ RAG 체인 구성 완료!")
+
+# ============================================
+# [단계 7] 챗봇 함수 (체인 활용)
+# ============================================
+
+def ask_question_v1(query: str) -> str:
+    """
+    RAG 체인을 사용한 질문 답변
+    
+    Args:
+        query: 사용자 질문
+        
+    Returns:
+        str: 챗봇 응답
+    """
+    response = rag_chain.invoke(query)
+    return response
+
+
+def ask_question_v2_with_history(query: str, history: list = None) -> str:
+    """
+    대화 히스토리를 포함한 질문 답변
+    
+    Args:
+        query: 사용자 질문
+        history: 이전 대화 리스트 [(user_msg, bot_msg), ...]
+        
+    Returns:
+        str: 챗봇 응답
+    """
+    # 히스토리를 문자열로 변환
+    history_text = ""
+    if history:
+        history_text = "\n".join([
+            f"사용자: {user}\n챗봇: {bot}" 
+            for user, bot in history[-3:]  # 최근 3개만
+        ])
+    
+    # 히스토리 포함 프롬프트
+    prompt_with_history = ChatPromptTemplate.from_messages([
+        ("system", """당신은 온누리상품권 가맹점 안내 전문 챗봇입니다.
+        이전 대화 맥락을 고려하여 자연스럽게 대화를 이어가세요.
+         다음 규칙을 반드시 따르세요:
+
+        1. 검색된 가맹점 정보(context)에 있는 내용만 사용하여 답변하세요.
+            절대 추측하거나 없는 정보를 만들어내지 마세요.
+
+        2. 사용자가 요청한 개수(n)보다 검색된 가맹점 수가 적다면,
+            실제 검색된 개수만 출력하고,
+            반드시 "해당 조건에 맞는 가맹점은 최대 n개입니다"와 같이
+            개수가 제한되는 이유를 명확히 설명하세요.
+         
+        3. 사용자가 화를 내거나 공격적인 표현을 사용하더라도
+            항상 정중하고 차분한 말투를 유지하세요.
+            감정적으로 대응하거나 반박하지 마세요.
+            
+        4. 검색된 가맹점 정보에 질문에 대한 명확한 답이 없을 경우
+            반드시 "해당 조건에 맞는 가맹점을 찾을 수 없습니다"라고 답하세요.
+
+        5. 이전 대화(history)를 고려해 자연스럽게 이어서 답변하세요.
+         """
+         ),
+                ("human", """이전 대화:
+                {history}
+
+                검색된 가맹점 정보:
+                {context}
+
+                사용자 질문: {question}
+
+                위 정보를 바탕으로 답변해주세요.
+                      
+                 """)
+    ])
+    
+    # 임시 체인
+    chain_with_history = (
+        {
+            "context": retriever | format_docs,
+            "question": RunnablePassthrough(),
+            "history": lambda x: history_text
+        }
+        | prompt_with_history
+        | llm
+        | output_parser
+    )
+    
+    response = chain_with_history.invoke(query)
+    return response
+
+
+# ============================================
+# [단계 8] 테스트
+# ============================================
+print("\n" + "="*60)
+print("6️⃣ 챗봇 테스트 시작")
+print("="*60)
+
+# 테스트 질문들
+test_queries = [
+    "경기도 가맹점을 알려줘",
+    "서울 음식점 찾아줘",
+    "디지털 상품권 되는 카페 알려줘"
+]
+
+for i, query in enumerate(test_queries, 1):
+    print(f"\n[질문 {i}] {query}")
+    print("-" * 60)
+    
+    # 체인 활용 답변
+    answer = ask_question_v1(query)
+    print(answer)
+    print()
+
+# ============================================
+# [단계 9] 대화형 테스트
+# ============================================
+print("\n" + "="*60)
+print("7️⃣ 대화형 챗봇 테스트 (히스토리 포함)")
+print("="*60)
+
+conversation_history = []
+
+# 질문 분류 함수
+def classify_question(query: str) -> str:
+    """
+    질문 유형 분류
+    """
+    stat_keywords = ["몇 개", "갯수", "개수", "통계", "얼마나", "비율", "수"]
+
+    for kw in stat_keywords:
+        if kw in query:
+            return "STAT"
+
+    return "RAG"
+
+# 통계 응답 함수
+
+import pandas as pd
+df = pd.read_csv('cleaned_onnuri.csv')
+
+# 딕셔너리 기반 파싱 함수 
+AREAS = ["강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산", "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북"]
+CATEGORIES = ["자전거", "카페", "안경", "음식점", "미용", "의류"]
+
+def extract_area_category(query: str):
+    area = next((a for a in AREAS if a in query), None)
+    category = next((c for c in CATEGORIES if c in query), None)
+    return area, category
+
+def handle_stat_question(query: str) -> str:
+    """
+    통계 질문 처리 (Python이 정답을 계산)
+    """
+    area, category = extract_area_category(query)
+
+    # 예시: 아주 단순 파싱 (나중에 고도화 가능)
+    # area = "경기" if "경기" in query else "서울"
+    # category = "자전거" if "자전거" in query else None
+    if not area:
+        return "지역을 지정해 주세요. 예: '경기 자전거 매장 몇 개야?'"
+    
+    stats = statistics(df, area=area, category=category)
+
+    return (
+        f"{area} 지역"
+        + (f" {category} 업종의 " if category else " ")
+        + f"가맹점은 총 {stats['total_count']}개입니다."
+    )
+
+# n번째 질문 
+while True:
+    query = input('온누리 챗봇입니다. 질문을 입력하세요: ') # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
+    print(f"\n사용자: {query}")
+
+    q_type = classify_question(query)
+
+    if q_type == "STAT":
+        answer = handle_stat_question(query)
+    else:
+        answer = ask_question_v2_with_history(query, conversation_history)
+    print(f"챗봇: {answer}")
+    conversation_history.append((query, answer))
+
+    print("\n" + "="*60)
+
+# query1 = "서울 음식점 알려줘" # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
+# print(f"\n사용자: {query1}")
+# answer1 = ask_question_v2_with_history(query1, conversation_history)
+# print(f"챗봇: {answer1}")
+# conversation_history.append((query1, answer1))
+
+# # 두 번째 질문 (맥락 유지)
+# query2 = "그 중에 중국음식만 보여줘"
+# print(f"\n사용자: {query2}")
+# answer2 = ask_question_v2_with_history(query2, conversation_history)
+# print(f"챗봇: {answer2}")
+# conversation_history.append((query2, answer2))
+
+# # 세 번째 질문 (맥락 유지)
+# query3 = "디지털 되는 곳만"
+# print(f"\n사용자: {query3}")
+# answer3 = ask_question_v2_with_history(query3, conversation_history)
+# print(f"챗봇: {answer3}")
+
+# print("\n" + "="*60)
+# print("✅ 모든 테스트 완료!")
+# print("="*60)

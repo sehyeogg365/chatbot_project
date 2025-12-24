@@ -25,8 +25,9 @@ jupyter notebook
 # 실행 순서:
 # 1. notebooks/01_data_exploration.ipynb
 # 2. notebooks/02_preprocessing.ipynb
-# 3. notebooks/03_search_engine.ipynb
-# 4. notebooks/04_rag_setup.ipynb  ⚠️ 10-20분 소요, API 비용 약 $0.30
+# 3. src/search_engine.ipynb
+# 4. src/rag_setup.ipynb  ⚠️ 10-20분 소요, API 비용 약 $0.30
+
 ```
 
 ### 4. 앱 실행

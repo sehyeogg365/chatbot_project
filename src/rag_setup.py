@@ -5,8 +5,7 @@ import os
 from langchain_community.vectorstores import Chroma
 from openai import OpenAI
 from langchain_openai import OpenAIEmbeddings
-from langchain_core.output_parsers import StrOutputParser
-import search_engine as search
+import search_engine as se
 '''
 목적: RAG 시스템 구축
 내용:
@@ -31,13 +30,11 @@ import search_engine as search
 # api_key = os.getenv("OPENAI_API_KEY")
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-from langchain_core.prompts import ChatPromptTemplate
-
 # 1.청킹
 from langchain_text_splitters import RecursiveCharacterTextSplitter # chunk단위로 분리시키는 역할
 text_splitter = RecursiveCharacterTextSplitter(chunk_size = 1000, chunk_overlap=200)# 이 두 요소도 매번 본인이 결정해야 함
 # search.document_list를 잘게 쪼갠다.
-splits = text_splitter.split_documents(search.document_list)
+splits = text_splitter.split_documents(se.document_list)
 
 # 2. 임베딩 모델 설정 
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")#
@@ -55,18 +52,18 @@ if os.path.exists(db_path):
 else:
     print("DB가 없어서 새로 생성합니다. (OpenAI API 호출 시작)")
     vectorstore = Chroma.from_documents(
-        documents=search.document_list[:1000], # 테스트를 위해 1000개로
+        documents=se.document_list[:1000], # 테스트를 위해 1000개로
         embedding=embeddings, 
         persist_directory=db_path
     )
     print("DB 생성 및 저장 완료!")
 
-print(f'전체 문서 개수: {len(search.document_list)}')
+print(f'전체 문서 개수: {len(se.document_list)}')
 
 
 # 4. 검색 테스트
 query = "서울 음식점"
-docs = vectorstore.similarity_search(query, k=3)
+docs = vectorstore.similarity_search(query, k=3)#k = 몇개의 결과를 가져올 것인가?
 
 # print(docs[0].page_content)
 print(f"--- '{query}' 검색 결과 (총 {len(docs)}개 찾음)---")
@@ -84,7 +81,7 @@ from tqdm import tqdm # 진행창을 보기 위한 라이브러리
 import time
 # 15만 개 데이터를 1,000개씩 나눠서 넣기 (Batch)
 batch_size = 1000
-sample_docs = search.document_list[:5000] # 15만 개 리스트 중 5000개, 전체 15만 건의 데이터를 모두 임베딩하는 것은 비용과 성능 측면에서 비효율적이라 판단
+sample_docs = se.document_list[:5000] # 15만 개 리스트 중 5000개, 전체 15만 건의 데이터를 모두 임베딩하는 것은 비용과 성능 측면에서 비효율적이라 판단
 
 for i in tqdm(range(0, len(sample_docs), batch_size)):
     batch = sample_docs[i : i + batch_size]
@@ -92,4 +89,3 @@ for i in tqdm(range(0, len(sample_docs), batch_size)):
     time.sleep(1)
     # 한 번 넣을 때마다 자동으로 저장됩니다.
 
-    

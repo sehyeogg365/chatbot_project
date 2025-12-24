@@ -1,4 +1,6 @@
 import pandas as pd
+from typing import Optional
+
 '''
 목적: 검색 함수 개발
 내용:
@@ -37,49 +39,68 @@ def multi_search(df: pd.DataFrame, area: str, name: str) -> pd.DataFrame:
         return pd.DataFrame()
     return area_name_df
 
-# 통계
-def statistics(df: pd.DataFrame) -> dict:
+# 통계 함수: 특정 지역(area)에 대한 가맹점 통계 생성
+def statistics(df: pd.DataFrame, area: str, category: Optional[str] = None) -> dict:
     stats = {}
-    
-    # 1. 전체 가맹점 수
-    stats['total_count'] = len(df)
-    
-    # 2. 지역별(소재지) 가맹점 분포 (상위 5개)
-    # 주소에서 앞부분(시/도)만 추출하여 계산
-    # df['city'] = df['소재지'].str.split().str[0]
-    # stats['city_distribution'] = df['city'].value_counts().head(5).to_dict()
-    
-    city_series = df["소재지"].str.split().str[0]
-    city_counts = city_series.value_counts()
 
-    # 3. 가장 활성화된 시장 (가맹점이 많은 시장 상위 5개) + 차지하는 비율
-    # stats['top_markets'] = df['소속 시장명(또는 상점가)'].value_counts().head(5).to_dict()
-    stats['top_markets'] = city_counts.head(5).to_dict()
+      # --------------------------------------------------
+    # 1. 지역(area) 기준 필터링
+    # 소재지 컬럼에 지역명이 포함된 데이터만 추출
+    # --------------------------------------------------
+    filtered_df = df[df["소재지"].str.contains(area, na=False)]
 
-    stats["city_distribution_ratio"] = (
-        (city_counts / city_counts.sum()).round(3).to_dict()
+    # --------------------------------------------------
+    # 2. 업종(category) 기준 추가 필터링 (선택)
+    # category가 None이 아닐 때만 적용
+    # --------------------------------------------------
+    if category:
+        filtered_df = filtered_df[
+            filtered_df["취급품목"].str.contains(category, na=False)
+        ]
+
+    # --------------------------------------------------
+    # 3. 전체 가맹점 수
+    # (지역 + 업종 조건을 모두 만족하는 데이터 기준)
+    # --------------------------------------------------
+    stats["total_count"] = len(filtered_df)
+
+    # 조건에 맞는 데이터가 없을 경우 조기 반환
+    if filtered_df.empty:
+        stats["message"] = "해당 조건에 맞는 가맹점이 없습니다."
+        return stats
+
+    # --------------------------------------------------
+    # 4. 시/도(또는 시/군)별 가맹점 분포
+    # 소재지 문자열에서 첫 단어만 추출
+    # --------------------------------------------------
+    city_series = (
+        filtered_df["소재지"]
+        .str.split()
+        .str[0]
     )
 
-    # 4. 주요 취급 품목 순위
-    stats['top_items'] = df['취급품목'].value_counts().head(5).to_dict()
+    city_counts = city_series.value_counts()
 
+    stats["top_regions"] = city_counts.head(5).to_dict()
+
+    stats["region_distribution_ratio"] = (
+        (city_counts / city_counts.sum())
+        .round(3)
+        .to_dict()
+    )
+
+    # --------------------------------------------------
+    # 5. 주요 취급 품목 TOP 5
+    # (업종을 지정하지 않았을 때만 의미 있음)
+    # --------------------------------------------------
+    stats["top_items"] = (
+        filtered_df["취급품목"]
+        .value_counts()
+        .head(5)
+        .to_dict()
+    )
     return stats
 
-# def statistics_v2(df: pd.DataFrame) -> dict:
-#     if df.empty:
-#         return {"error": "데이터가 없습니다."}
-
-#     stats = {
-#         "total": len(df),
-#         "top_regions": df['소재지'].str.split().str[1].value_counts().head(3).to_dict(), # '구' 단위 상위 3개
-#         "category_ratio": (df['취급품목'].value_counts(normalize=True).head(3) * 100).to_dict(), # 상위 품목 비율(%)
-#     }
-    
-#     # 인사이트 생성 로직
-#     most_common_cat = list(stats['category_ratio'].keys())[0]
-#     stats['insight'] = f"이 지역은 {most_common_cat} 업종이 가장 활성화되어 있습니다."
-    
-#     return stats
 
 
 # 테스트
@@ -100,7 +121,7 @@ if __name__ == "__main__":
     print(seoul_market_stores.head())
 
     # 통계
-    statistics_seoul = statistics(df1)
+    statistics_seoul = statistics(df1, '서울')
     print(f"통계")
     print(statistics_seoul)
 
