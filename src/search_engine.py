@@ -119,3 +119,7 @@ for index, row in df1.iterrows():
     # 여기서 Document 객체 생성
     doc = Document(page_content=content, metadata=metadata)
     document_list.append(doc)
+    
+
+for doc in document_list[:15]:
+    print(doc)

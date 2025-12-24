@@ -55,6 +55,12 @@ __pycache__/
 # .gitignore 파일 내용
 api_keys.txt
 
+# 벡터 DB (용량 큼!)
+vectordb/
+vectordb/chroma_db/
+*.db
+*.sqlite3
+
 # 기타
 *.log
 .DS_Store

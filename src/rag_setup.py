@@ -43,13 +43,20 @@ splits = text_splitter.split_documents(search.document_list)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")#
 
 # 3. 벡터DB 생성 및 저장 
-vectorstore = Chroma.from_documents(documents=search.document_list, embedding=embeddings, persist_directory="./chroma_db")
-docs = vectorstore.similarity_search('격하 과정에 대해서 설명해주세요.')
-
+vectorstore = Chroma.from_documents(documents=search.document_list[:1000], embedding=embeddings, persist_directory="vectordb/chroma_db")# 최대 1000데이터 저장
+print(f'전체 문서 개수: {len(search.document_list)}')
 # 15만개 가맹점 임베딩 생성 및 저장
 
 # 4. 검색 테스트
-query = "격하 과정에 대해서 설명해주세요."
-docs = vectorstore.similarity_search(query, k=3)
+query = "서울 음식점"
+docs = vectorstore.similarity_search(query, k=100)
 
-print(docs[0].page_content)
+# print(docs[0].page_content)
+print(f"--- '{query}' 검색 결과 (총 {len(docs)}개 찾음)---")
+if not docs:
+    print("검색 결과가 없습니다. DB에 데이터가 정상적으로 저장되었는지 확인하세요.")
+else:
+    for i, doc in enumerate(docs):
+        print(f"[{i+1}] {doc.page_content}")
+        print(f"메타데이터: {doc.metadata}")
+        print("-" * 30)
