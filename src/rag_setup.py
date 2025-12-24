@@ -43,13 +43,30 @@ splits = text_splitter.split_documents(search.document_list)
 embeddings = OpenAIEmbeddings(model="text-embedding-3-small")#
 
 # 3. 벡터DB 생성 및 저장 
-vectorstore = Chroma.from_documents(documents=search.document_list[:1000], embedding=embeddings, persist_directory="vectordb/chroma_db")# 최대 1000데이터 저장
+
+db_path = "vectordb/chroma_db"
+
+# 만약 DB 폴더가 이미 존재한다면? -> 불러오기 (공짜!)
+if os.path.exists(db_path):
+    print("이미 생성된 DB가 있네요. 로컬에서 불러옵니다 (비용 $0)")
+    vectorstore = Chroma(embedding_function=embeddings, persist_directory="vectordb/chroma_db")# 최대 1000데이터 저장
+
+# 만약 DB 폴더가 없다면? -> 새로 만들기 (OpenAI 비용 발생)
+else:
+    print("DB가 없어서 새로 생성합니다. (OpenAI API 호출 시작)")
+    vectorstore = Chroma.from_documents(
+        documents=search.document_list[:1000], # 테스트를 위해 1000개로
+        embedding=embeddings, 
+        persist_directory=db_path
+    )
+    print("DB 생성 및 저장 완료!")
+
 print(f'전체 문서 개수: {len(search.document_list)}')
-# 15만개 가맹점 임베딩 생성 및 저장
+
 
 # 4. 검색 테스트
 query = "서울 음식점"
-docs = vectorstore.similarity_search(query, k=100)
+docs = vectorstore.similarity_search(query, k=3)
 
 # print(docs[0].page_content)
 print(f"--- '{query}' 검색 결과 (총 {len(docs)}개 찾음)---")
@@ -60,3 +77,19 @@ else:
         print(f"[{i+1}] {doc.page_content}")
         print(f"메타데이터: {doc.metadata}")
         print("-" * 30)
+
+
+# 15만개 가맹점 임베딩 생성 및 저장
+from tqdm import tqdm # 진행창을 보기 위한 라이브러리
+import time
+# 15만 개 데이터를 1,000개씩 나눠서 넣기 (Batch)
+batch_size = 1000
+sample_docs = search.document_list[:5000] # 15만 개 리스트 중 5000개, 전체 15만 건의 데이터를 모두 임베딩하는 것은 비용과 성능 측면에서 비효율적이라 판단
+
+for i in tqdm(range(0, len(sample_docs), batch_size)):
+    batch = sample_docs[i : i + batch_size]
+    vectorstore.add_documents(batch)
+    time.sleep(1)
+    # 한 번 넣을 때마다 자동으로 저장됩니다.
+
+    
