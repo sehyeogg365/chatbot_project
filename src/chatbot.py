@@ -23,11 +23,14 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
-from search_engine import statistics
+from src.search_engine import statistics
 from typing import Optional
+from pathlib import Path
+# 3. 환경변수 로드  
+current_dir = Path(__file__).resolve().parent
+env_path = current_dir.parent / "api_keys.txt"
 
-# 3. 환경변수 로드
-load_dotenv('../api_keys.txt')
+load_dotenv(env_path)
 
 # ============================================
 # [단계 1] 벡터 스토어 로드
@@ -468,21 +471,34 @@ def handle_stat_question(query: str) -> str:
     return handle_stat_count(area, category)
 
 # n번째 질문 
-while True:
-    query = input('온누리 챗봇입니다. 질문을 입력하세요: ') # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
-    print(f"\n사용자: {query}")
-
-    if query.lower() in ['quit', 'exit', '종료']:
-        print("👋 챗봇을 종료합니다.")
-        break
-
+#Streamlit 연동
+def process_query(query: str, history: list) -> str:
+    """
+    질문 하나를 받아 답변 하나를 생성하는 핵심 로직
+    (CLI / Streamlit / API 공용)
+    """
     q_type = classify_question(query)
 
     if q_type == "STAT":
-        answer = handle_stat_question(query)
-    else:
-        answer = ask_question_v2_with_history(query, conversation_history)
-    print(f"챗봇: {answer}")
-    conversation_history.append((query, answer))
+        return handle_stat_question(query)
 
-    print("\n" + "="*60)
+    return ask_question_v2_with_history(query, history)
+
+# while True:
+#     query = input('온누리 챗봇입니다. 질문을 입력하세요: ') # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
+#     print(f"\n사용자: {query}")
+
+#     if query.lower() in ['quit', 'exit', '종료']:
+#         print("👋 챗봇을 종료합니다.")
+#         break
+
+#     q_type = classify_question(query)
+
+#     if q_type == "STAT":
+#         answer = handle_stat_question(query)
+#     else:
+#         answer = ask_question_v2_with_history(query, conversation_history)
+#     print(f"챗봇: {answer}")
+#     conversation_history.append((query, answer))
+
+#     print("\n" + "="*60)
