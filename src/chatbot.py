@@ -290,9 +290,7 @@ def classify_stat_detail(query: str) -> str:
 
     if "업종" in query:
         return "CATEGORY"
-    # if any(k in query for k in ["업종", "음식점", "카페", "자전거", "안경"]): # 
-    #     return "CATEGORY"
-
+    
     return "COUNT"
 
 # 질문 파싱을 단일 함수로 통합
@@ -328,21 +326,36 @@ def handle_stat_count(area: str, category: Optional[str]) -> str:
         product_counter = {}
         filtered_df = stats.get('data', df[df['소재지'].str.contains(area, na=False)])
         
-        for _, row in filtered_df.iterrows():
-            items = str(row['취급품목']).split(',')
+        for _, row in filtered_df.iterrows():# _는 인덱스 번호인데 사용하지 않으므로 생략하고, row에 행 데이터를 담는다.
+            items = str(row['취급품목']).split(',')# '취급품목' 컬럼의 데이터를 문자열로 변환한 뒤 쉼표(,)를 기준으로 자름 
             for item in items:
-                item = item.strip()
+                item = item.strip()# 불필요한 공백을 제거
                 if category in item:  # 카테고리 포함
-                    if item in product_counter:
+                    if item in product_counter: # 원래 있던 품목 
                         product_counter[item] += 1
-                    else:
-                        product_counter[item] = 1
+                    else: # 처음발견된 품목 
+                        product_counter[item] = 1 
         
-        # 상위 5개
-        sorted_products = sorted(product_counter.items(), key=lambda x: x[1], reverse=True)[:5]
+        # 전체 분포 정렬
+        all_sorted = sorted(product_counter.items(), key=lambda x: x[1], reverse=True)
         
-        for product, cnt in sorted_products:
-            result_text += f"  - {product}: {cnt}개\n"
+        # 상위 5개와 나머지 분리
+        top_5 = all_sorted[:5]
+        others = all_sorted[5:]
+        
+        for product, cnt in top_5:
+            result_text += f"   - {product}: {cnt}개\n"
+        
+        # 나머지가 있다면 '기타'로 합산 표시
+        if others:
+            other_sum = sum(cnt for _, cnt in others)
+            result_text += f"   - 기타: {other_sum}개\n"
+
+        # # 상위 5개
+        # sorted_products = sorted(product_counter.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # for product, cnt in sorted_products:
+        #     result_text += f"  - {product}: {cnt}개\n"
         
         result_text += "\n"
     
@@ -353,7 +366,7 @@ def handle_stat_count(area: str, category: Optional[str]) -> str:
     
     # stats에서 data 가져오기 (없으면 직접 필터링)
     if 'data' in stats:
-        sample_df = stats['data']
+        sample_df = stats['data']# 필터링된 데이터
     else:
         sample_df = df[df['소재지'].str.contains(area, na=False)]
         if category:
@@ -364,7 +377,7 @@ def handle_stat_count(area: str, category: Optional[str]) -> str:
     # 최대 10개만
     sample_df = sample_df.head(10)
     
-    for i, (_, row) in enumerate(sample_df.iterrows(), 1):
+    for i, (_, row) in enumerate(sample_df.iterrows(), 1):# _는 인덱스 번호인데 사용하지 않으므로 생략
         result_text += f"**{i}. {row['가맹점명']}**\n"
         result_text += f"   📍 소재지: {row['소재지']}\n"
         result_text += f"   🛒 취급품목: {row['취급품목']}\n"
