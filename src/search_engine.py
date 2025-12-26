@@ -47,7 +47,8 @@ def statistics(df: pd.DataFrame, area: str, category: Optional[str] = None) -> d
     # 1. 지역(area) 기준 필터링
     # 소재지 컬럼에 지역명이 포함된 데이터만 추출
     # --------------------------------------------------
-    filtered_df = df[df["소재지"].str.contains(area, na=False)]
+    if area:
+        filtered_df = df[df["소재지"].str.contains(area, na=False)]
 
     # --------------------------------------------------
     # 2. 업종(category) 기준 추가 필터링 (선택)
@@ -99,6 +100,10 @@ def statistics(df: pd.DataFrame, area: str, category: Optional[str] = None) -> d
         .head(5)
         .to_dict()
     )
+
+     # 6. 필터링된 데이터도 반환    
+    stats["data"] = filtered_df
+
     return stats
 
 

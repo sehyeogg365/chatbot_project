@@ -260,6 +260,21 @@ def classify_question(query: str) -> str:
     for kw in stat_keywords:
         if kw in query:
             return "STAT"
+        
+    # 지역 + 업종 조합 → STAT로 처리 (정확한 검색)
+    areas = ["서울", "경기", "부산", "대구", "인천", "광주", "대전",
+             "울산", "세종", "강원", "충북", "충남", "전북", "전남",
+             "경북", "경남", "제주"]
+    
+    categories = ["자전거", "안경", "미용", "카페", "음식점", "한식"]
+    
+    has_area = any(area in query for area in areas)
+    has_category = any(cat in query for cat in categories)
+    
+    # 지역 + 카테고리 → STAT (정확한 검색 필요)
+    if has_area and has_category:
+        print("🔍 [지역+업종] 감지 → STAT 모드")
+        return "STAT"    
 
     return "RAG"
 
@@ -267,11 +282,13 @@ def classify_stat_detail(query: str) -> str:
     """
     STAT 질문의 세부 유형 분류
     """
-    if "비율" in query or "퍼센트" in query:
+    if "비율" in query or "퍼센트" in query or "%" in query:
         return "RATIO"
 
-    if any(k in query for k in ["업종", "음식점", "카페", "자전거", "안경"]):
+    if "업종" in query:
         return "CATEGORY"
+    # if any(k in query for k in ["업종", "음식점", "카페", "자전거", "안경"]): # 
+    #     return "CATEGORY"
 
     return "COUNT"
 
@@ -289,12 +306,88 @@ def handle_stat_count(area: str, category: Optional[str]) -> str:
     stats = statistics(df, area=area, category=category)
     if "message" in stats:
         return stats["message"]
+    # ============================================
+    # 1. 기본 정보
+    # ============================================
+    count = stats['total_count']
+    result_text = f"📍 {area or '전국'} 지역"
+    if category:
+        result_text += f" **{category}** 관련"
+    result_text += f" 가맹점은 총 **{count:,}개**입니다.\n\n"
     
-    return (
-        f"{area} 지역"
-        + (f" {category} 업종의 " if category else " ")
-        + f"가맹점은 총 {stats['total_count']}개입니다."
-    )
+    # ============================================
+    # 2. 종류별 분포 (category가 있을 때만)
+    # ============================================
+    if category and count > 0:
+        result_text += f"📊 **{category} 종류별 분포:**\n"
+        
+        # 취급품목에서 카테고리 포함된 것 추출
+        product_counter = {}
+        filtered_df = stats.get('data', df[df['소재지'].str.contains(area, na=False)])
+        
+        for _, row in filtered_df.iterrows():
+            items = str(row['취급품목']).split(',')
+            for item in items:
+                item = item.strip()
+                if category in item:  # 카테고리 포함
+                    if item in product_counter:
+                        product_counter[item] += 1
+                    else:
+                        product_counter[item] = 1
+        
+        # 상위 5개
+        sorted_products = sorted(product_counter.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        for product, cnt in sorted_products:
+            result_text += f"  - {product}: {cnt}개\n"
+        
+        result_text += "\n"
+    
+    # ============================================
+    # 3. 전체 가맹점 목록 (10개까지)
+    # ============================================
+    result_text += "🏪 **가맹점 목록:**\n\n"
+    
+    # stats에서 data 가져오기 (없으면 직접 필터링)
+    if 'data' in stats:
+        sample_df = stats['data']
+    else:
+        sample_df = df[df['소재지'].str.contains(area, na=False)]
+        if category:
+            sample_df = sample_df[
+                sample_df['취급품목'].str.contains(category, na=False, case=False)
+            ]
+    
+    # 최대 10개만
+    sample_df = sample_df.head(10)
+    
+    for i, (_, row) in enumerate(sample_df.iterrows(), 1):
+        result_text += f"**{i}. {row['가맹점명']}**\n"
+        result_text += f"   📍 소재지: {row['소재지']}\n"
+        result_text += f"   🛒 취급품목: {row['취급품목']}\n"
+        
+        # 디지털 여부
+        digital = "✅ 가능" if row.get('디지털형 가맹 여부') == 'Y' else "❌ 불가"
+        result_text += f"   💳 디지털 상품권: {digital}\n"
+        
+        # 소속 시장
+        if pd.notna(row.get('소속 시장명(또는 상점가)')):
+            result_text += f"   🏬 소속: {row['소속 시장명(또는 상점가)']}\n"
+        
+        result_text += "\n"
+    
+    # ============================================
+    # 4. 더 많은 결과가 있다면
+    # ============================================
+    if count > 10:
+        result_text += f"💡 *총 {count}개 중 10개만 표시했습니다.*\n"
+    
+    return result_text
+    # return (
+    #     f"{area} 지역"
+    #     + (f" {category} 업종의 " if category else " ")
+    #     + f"가맹점은 총 {stats['total_count']}개입니다."
+    # )
 
 # 업종별 통계
 def handle_stat_category(area: str) -> str:
@@ -314,8 +407,6 @@ def handle_stat_category(area: str) -> str:
 
 # 비율
 def handle_stat_ratio(area: str, category: Optional[str] = None) -> float:
-    # area, category = extract_area_category(query)
-
     stats = statistics(df, area=area, category=category)
 
     ratios = stats.get("region_distribution_ratio")
@@ -356,8 +447,15 @@ def handle_stat_question(query: str) -> str:
     통계 질문 처리 (Python이 정답을 계산)
     """
     area, category  = extract_area_category(query)
-    if not area:
-        return "지역을 지정해 주세요. 예: '서울 자전거 매장 몇 개야?'"
+    if not area and category:
+        return "지역이나 업종을 다시 지정해 주세요. 예: '서울 자전거 매장 몇 개야?'"
+    
+    # 2차 분기
+    # if "비율" in query or "%" in query:
+    #     return handle_stat_ratio(area)
+
+    # if "업종" in query:
+    #     return handle_stat_category(area)
     
     stat_type = classify_stat_detail(query)
     if stat_type == "COUNT":
@@ -367,11 +465,16 @@ def handle_stat_question(query: str) -> str:
     elif stat_type == "RATIO":
         return handle_stat_ratio(area, category)
     
+    return handle_stat_count(area, category)
 
 # n번째 질문 
 while True:
     query = input('온누리 챗봇입니다. 질문을 입력하세요: ') # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
     print(f"\n사용자: {query}")
+
+    if query.lower() in ['quit', 'exit', '종료']:
+        print("👋 챗봇을 종료합니다.")
+        break
 
     q_type = classify_question(query)
 
