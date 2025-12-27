@@ -285,10 +285,10 @@ def classify_stat_detail(query: str) -> str:
     """
     STAT 질문의 세부 유형 분류
     """
-    if "비율" in query or "퍼센트" in query or "%" in query:
-        return "RATIO"
-
-    if "업종" in query:
+    # if "비율" in query or "퍼센트" in query or "%" in query:
+    #     return "RATIO"
+    # "비율" 또는 "업종" → CATEGORY
+    if any(k in query for k in ["비율", "퍼센트", "%", "업종", "통계"]):
         return "CATEGORY"
     
     return "COUNT"
@@ -410,37 +410,42 @@ def handle_stat_category(area: str) -> str:
     # area = next((a for a in AREAS if a in query), None)
 
     stats = statistics(df, area=area)
-    top_items = stats.get("top_items", {})
+
+    # (업종을 지정하지 않아야 그 지역의 전체 업종 분포를 알 수 있다)
+    if "message" in stats:
+        return stats["message"]
+    
+    # 업종 분포 가져오기 
+    total_count = stats["total_count"]  # 해당 지역 전체 가맹점 수
+    top_items = stats.get("top_items", {}) # 주요 품목(업종) TOP 5
+
+    if not area:
+        return "비율을 알고 싶은 지역을 지정해 주세요."
 
     if not top_items:
         return f"{area} 지역에 업종 통계 데이터가 없습니다."
 
-    result = f"{area} 지역 주요 업종 상위 5개는 다음과 같습니다:\n"
-    for cat, cnt in top_items.items():
-        result += f"- {cat}: {cnt}개\n"
+    # 2. 결과 텍스트 생성
+    result = f"📊 **{area} 지역의 주요 업종별 비중 (TOP 5)**\n"
+    result += f"(전체 가맹점 수: {total_count:,}개)\n\n"
+
+    # 3. 각 업종별로 비율 계산 (업종 개수 / 지역 전체 개수)
+    # sum_ratio = 0
+    result = f"{area} 지역 가맹점 분포 비율은 다음과 같습니다:\n"
+    for item, cnt in top_items.items():
+        ratio = (cnt / total_count) * 100
+        # sum_ratio += ratio
+        result += f"- **{item}**: {ratio:.1f}% ({cnt:,}개)\n"
+
+    # 4. 나머지 항목 합산 (선택 사항)
+    # if sum_ratio < 100:
+    #     result += f"- **기타**: {100 - sum_ratio:.1f}%\n"
 
     return result
 
 # 비율
 def handle_stat_ratio(area: str, category: Optional[str] = None) -> float:
-    stats = statistics(df, area=area, category=category)
-
-    ratios = stats.get("region_distribution_ratio")
-
-    if not area:
-        return "비율을 알고 싶은 지역을 지정해 주세요."
-
-    if not ratios:
-        return "해당 조건에 대한 비율 정보를 계산할 수 없습니다."
-
-    # if "region_distribution_ratio" not in stats:
-    #     return "해당 조건에 대한 비율 정보를 계산할 수 없습니다."
-
-    result = f"{area} 지역 가맹점 분포 비율은 다음과 같습니다:\n"
-    for region, ratio in ratios.items():
-        result += f"- {region}: {ratio * 100:.1f}%\n"
-
-    return result
+    return handle_stat_category(area)
 
 
 # 통계 응답 함수
@@ -466,25 +471,18 @@ def handle_stat_question(query: str) -> str:
     if not area and category:
         return "지역이나 업종을 다시 지정해 주세요. 예: '서울 자전거 매장 몇 개야?'"
     
-    # 2차 분기
-    # if "비율" in query or "%" in query:
-    #     return handle_stat_ratio(area)
-
-    # if "업종" in query:
-    #     return handle_stat_category(area)
-    
     stat_type = classify_stat_detail(query)
-    if stat_type == "COUNT":
-        return handle_stat_count(area, category)
-    elif stat_type == "CATEGORY":
+    # 간소화된 코드문 
+    if stat_type == "CATEGORY":
+        # 업종 통계 (비율 포함)
         return handle_stat_category(area)
-    elif stat_type == "RATIO":
-        return handle_stat_ratio(area, category)
-    
-    return handle_stat_count(area, category)
+    else:
+        # 개수 세기 (상세 정보)
+        return handle_stat_count(area, category)
+
 
 # n번째 질문 
-#Streamlit 연동
+# Streamlit 연동
 def process_query(query: str, history: list) -> str:
     """
     질문 하나를 받아 답변 하나를 생성하는 핵심 로직
@@ -496,22 +494,3 @@ def process_query(query: str, history: list) -> str:
         return handle_stat_question(query)
 
     return ask_question_v2_with_history(query, history)
-
-# while True:
-#     query = input('온누리 챗봇입니다. 질문을 입력하세요: ') # 이곳을 무한루프문으로 고쳐보기 input()으로 바꾸고 
-#     print(f"\n사용자: {query}")
-
-#     if query.lower() in ['quit', 'exit', '종료']:
-#         print("👋 챗봇을 종료합니다.")
-#         break
-
-#     q_type = classify_question(query)
-
-#     if q_type == "STAT":
-#         answer = handle_stat_question(query)
-#     else:
-#         answer = ask_question_v2_with_history(query, conversation_history)
-#     print(f"챗봇: {answer}")
-#     conversation_history.append((query, answer))
-
-#     print("\n" + "="*60)
