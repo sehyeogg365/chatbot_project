@@ -33,7 +33,8 @@ def app():
 		("docs/서울 가맹점 수.png", "서울 가맹점 수 조회"),
 		("docs/경기 자전거 가맹점 수.png", "경기 자전거 가맹점 수"),
 		("docs/서울 가맹점 통계.png", "서울 가맹점 통계"),
-		("docs/서울 업종 비율.png", "서울 업종 비율")
+		("docs/서울 업종 비율.png", "서울 업종 비율"),
+		("docs/RAG 기반 답변.png", "RAG 기반 답변")
 	]
 
     for path, caption in images:
