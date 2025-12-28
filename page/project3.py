@@ -9,9 +9,9 @@ def app():
 
     # 1. 기존 대화 내역 표시
     for user_msg, bot_msg in st.session_state.history:
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar="👤"):
             st.write(user_msg)
-        with st.chat_message("assistant"):
+        with st.chat_message("assistant", avatar="🏪"):
             st.write(bot_msg)
 
     # 2. 사용자 입력 받기
