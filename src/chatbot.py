@@ -154,70 +154,70 @@ def ask_question_v2_with_history(query: str, history: list = None) -> str:
     """
     RAG 검색 (Pandas 1차 필터링 추가)  RAG에도 Pandas 필터링 추가
     """
-    # # ============================================
-    # # 1. 지역/카테고리 추출
-    # # ============================================
-    # area, category = extract_area_category(query)
+    # ============================================
+    # 1. 지역/카테고리 추출
+    # ============================================
+    area, category = extract_area_category(query)
     
-    # print(f"🔍 RAG 추출: area={area}, category={category}")
+    print(f"🔍 RAG 추출: area={area}, category={category}")
     
-    # # ============================================
-    # # 2. Pandas로 1차 필터링 (area 있으면)
-    # # ============================================
-    # filtered_df = df.copy()
+    # ============================================
+    # 2. Pandas로 1차 필터링 (area 있으면)
+    # ============================================
+    filtered_df = df.copy()
     
-    # if area:
-    #     filtered_df = filtered_df[
-    #         filtered_df['소재지'].str.contains(area, na=False)
-    #     ]
-    #     print(f"✅ {area} 필터: {len(filtered_df)}개")
+    if area:
+        filtered_df = filtered_df[
+            filtered_df['소재지'].str.contains(area, na=False)
+        ]
+        print(f"✅ {area} 필터: {len(filtered_df)}개")
     
-    # if category:
-    #     # 카테고리 확장
-    #     category_expansions = {
-    #         "카페": ["카페", "커피", "디저트", "베이커리"],
-    #         "음식점": ["음식점", "식당", "한식", "중식", "일식"],
-    #         "자전거": ["자전거", "바이크"],
-    #     }
+    if category:
+        # 카테고리 확장
+        category_expansions = {
+            "카페": ["카페", "커피", "디저트", "베이커리"],
+            "음식점": ["음식점", "식당", "한식", "중식", "일식"],
+            "자전거": ["자전거", "바이크"],
+        }
         
-    #     keywords = category_expansions.get(category, [category])
+        keywords = category_expansions.get(category, [category])
         
-    #     mask = pd.Series([False] * len(filtered_df), index=filtered_df.index)
-    #     for keyword in keywords:
-    #         mask |= filtered_df['취급품목'].str.contains(
-    #             keyword, na=False, case=False
-    #         )
+        mask = pd.Series([False] * len(filtered_df), index=filtered_df.index)
+        for keyword in keywords:
+            mask |= filtered_df['취급품목'].str.contains(
+                keyword, na=False, case=False
+            )
         
-    #     filtered_df = filtered_df[mask]
-    #     print(f"✅ {category} 필터: {len(filtered_df)}개")
+        filtered_df = filtered_df[mask]
+        print(f"✅ {category} 필터: {len(filtered_df)}개")
     
-    # # ============================================
-    # # 3. 결과 없으면 조기 반환
-    # # ============================================
-    # if len(filtered_df) == 0:
-    #     return f"{area or '해당 지역'}에 {category or '관련'} 가맹점이 없습니다."
+    # ============================================
+    # 3. 결과 없으면 조기 반환
+    # ============================================
+    if len(filtered_df) == 0:
+        return f"{area or '해당 지역'}에 {category or '관련'} 가맹점이 없습니다."
     
-    # # ============================================
-    # # 4. 필터링된 데이터를 문서로 변환
-    # # ============================================
-    # docs_text = ""
-    # for i, (_, row) in enumerate(filtered_df.head(20).iterrows(), 1):
-    #     docs_text += f"""
-    # [{i}]
-    # 가맹점명: {row['가맹점명']}
-    # 소재지: {row['소재지']}
-    # 취급품목: {row['취급품목']}
-    # 디지털: {'가능' if row.get('디지털형 가맹 여부')=='Y' else '불가'}
-    # """
-    # # ============================================
-    # # 5. 히스토리 처리
-    # # ============================================
-    # history_text = ""
-    # if history:
-    #     history_text = "\n".join([
-    #         f"사용자: {user}\n챗봇: {bot}"
-    #         for user, bot in history[-3:]
-    #     ])    
+    # ============================================
+    # 4. 필터링된 데이터를 문서로 변환
+    # ============================================
+    docs_text = ""
+    for i, (_, row) in enumerate(filtered_df.head(20).iterrows(), 1):
+        docs_text += f"""
+    [{i}]
+    가맹점명: {row['가맹점명']}
+    소재지: {row['소재지']}
+    취급품목: {row['취급품목']}
+    디지털: {'가능' if row.get('디지털형 가맹 여부')=='Y' else '불가'}
+    """
+    # ============================================
+    # 5. 히스토리 처리
+    # ============================================
+    history_text = ""
+    if history:
+        history_text = "\n".join([
+            f"사용자: {user}\n챗봇: {bot}"
+            for user, bot in history[-3:]
+        ])    
     """
     대화 히스토리를 포함한 질문 답변
     
@@ -260,9 +260,15 @@ def ask_question_v2_with_history(query: str, history: list = None) -> str:
             5. 대화 맥락 유지: 이전 대화에서 언급된 지역이나 업종을 기억하여 자연스럽게 대답하세요.
          
             [검증 규칙]
-            - 각 가맹점의 '주요품목'을 반드시 확인하세요. 
-            - 사용자가 요청한 키워드(예: 자전거)가 '가맹점명'이나 '주요품목'에 직접적으로 포함되지 않은 데이터는 추천 대상에서 제외하세요. 
-            - 편의점(GS25, 세븐일레븐 등)이나 음식점이 검색 결과에 섞여 있다면, '자전거'와 직접적 관련이 없는 한 답변에서 제외하세요.
+            1. 적극적으로 추천하세요.
+            2. 관련 있는 가맹점도 추천하세요.
+            3. 유사한 가맹점도 도움이 됩니다.
+
+            💡 예시:
+            - "카페" → "커피", "디저트"도 OK
+            - "고기" → "구이", "삼겹살"도 OK
+
+            → LLM: "비슷한 곳을 추천드립니다!" ✅
          """
          ),
                 ("human", """이전 대화:
@@ -274,7 +280,7 @@ def ask_question_v2_with_history(query: str, history: list = None) -> str:
                 사용자 질문: {question}
 
                 위 정보를 바탕으로 답변해주세요.
-                      
+                정확히 일치하지 않아도 관련 있으면 추천하세요.      
                  """)
     ])
     
@@ -332,7 +338,38 @@ def classify_question(query: str) -> str:
     질문 유형 분류
     """
 
-     # 2. RAG 키워드 (확실한 추천/검색 질문)
+    # 1. STAT 키워드 (확실한 통계 질문)
+    stat_keywords = ["몇 개", "갯수", "개수", "통계", "얼마나", "비율", "수" ,"%"]
+
+    for kw in stat_keywords:
+        if kw in query:
+            return "STAT"
+        
+    # 2.지역 + 업종 조합 → STAT로 처리 (정확한 검색)
+    areas = ["서울", "경기", "부산", "대구", "인천", "광주", "대전",
+             "울산", "세종", "강원", "충북", "충남", "전북", "전남",
+             "경북", "경남", "제주"]
+    
+    categories = ["자전거", "안경", "미용", "카페", "음식점", "한식", "고기"]
+    
+    has_area = any(area in query for area in areas)
+    has_category = any(cat in query for cat in categories)
+
+    # 지역 + 카테고리 → STAT (정확한 검색 필요)
+    if has_area and has_category:
+        recommend_keywords = ["추천", "알려", "소개", "찾아", "보여"]
+        has_recommend = any(kw in query for kw in recommend_keywords)
+
+        if has_recommend:
+            print("🔍 [지역+업종+추천] → STAT_RECOMMEND 모드")
+            return "RAG"
+        else:
+            print("🔍 [지역+업종] 감지 → STAT 모드")
+            return "STAT"    
+
+    
+
+    # 3. RAG 키워드 (확실한 추천/검색 질문)
     rag_keywords = [
         "추천", "알려줘", "찾아줘", "보여줘"
         "어디", "뭐", "무엇", "어떤",
@@ -347,31 +384,12 @@ def classify_question(query: str) -> str:
             print(f"🔍 [RAG 키워드 '{kw}'] 감지 → RAG 모드")
             return "RAG"
         
-    # 1. STAT 키워드 (확실한 통계 질문)
-    stat_keywords = ["몇 개", "갯수", "개수", "통계", "얼마나", "비율", "수" ,"%"]
-
-    for kw in stat_keywords:
-        if kw in query:
-            return "STAT"
-        
-   
-
-    # 3.지역 + 업종 조합 → STAT로 처리 (정확한 검색)
-    areas = ["서울", "경기", "부산", "대구", "인천", "광주", "대전",
-             "울산", "세종", "강원", "충북", "충남", "전북", "전남",
-             "경북", "경남", "제주"]
     
-    categories = ["자전거", "안경", "미용", "카페", "음식점", "한식", "고기"]
-    
-    has_area = any(area in query for area in areas)
-    has_category = any(cat in query for cat in categories)
-    
-    # 지역 + 카테고리 → STAT (정확한 검색 필요)
-    if has_area and has_category:
-        print("🔍 [지역+업종] 감지 → STAT 모드")
-        return "STAT"    
-
     return "RAG"
+
+    
+    
+    
 
 def classify_stat_detail(query: str) -> str:
     """
@@ -576,13 +594,16 @@ def handle_stat_question(query: str) -> str:
 # n번째 질문 
 # Streamlit 연동
 def process_query(query: str, history: list) -> str:
-    """
-    질문 하나를 받아 답변 하나를 생성하는 핵심 로직
-    (CLI / Streamlit / API 공용)
-    """
     q_type = classify_question(query)
 
     if q_type == "STAT":
         return handle_stat_question(query)
+
+    # 🔥 RAG 전에 조건 추출
+    area, category = extract_area_category(query)
+
+    # 조건이 명확하면 → RAG에 힌트로 넣기
+    if area or category:
+        query = f"[지역:{area}] [업종:{category}] {query}"
 
     return ask_question_v2_with_history(query, history)
