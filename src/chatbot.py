@@ -540,16 +540,16 @@ def handle_stat_category(area: str) -> str:
     result += f"(전체 가맹점 수: {total_count:,}개)\n\n"
 
     # 3. 각 업종별로 비율 계산 (업종 개수 / 지역 전체 개수)
-    # sum_ratio = 0
+    sum_ratio = 0
     result = f"{area} 지역 가맹점 분포 비율은 다음과 같습니다:\n"
     for item, cnt in top_items.items():
         ratio = (cnt / total_count) * 100
-        # sum_ratio += ratio
+        sum_ratio += ratio
         result += f"- **{item}**: {ratio:.1f}% ({cnt:,}개)\n"
 
     # 4. 나머지 항목 합산 (선택 사항)
-    # if sum_ratio < 100:
-    #     result += f"- **기타**: {100 - sum_ratio:.1f}%\n"
+    if sum_ratio < 100:
+        result += f"- **기타**: {100 - sum_ratio:.1f}%\n"
 
     return result
 
