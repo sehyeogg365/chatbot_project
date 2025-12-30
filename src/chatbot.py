@@ -330,7 +330,7 @@ print("\n" + "="*60)
 print("7️⃣ 대화형 챗봇 테스트 (히스토리 포함)")
 print("="*60)
 
-conversation_history = []
+# conversation_history = []
 
 # 질문 분류 함수
 def classify_question(query: str) -> str:
