@@ -225,7 +225,7 @@ def ask_question_v2_with_history(query: str, history: list = None) -> str:
     if history:
         history_text = "\n".join([
             f"사용자: {user}\n챗봇: {bot}" 
-            for user, bot in history[-3:]  # 최근 3개만
+            for user, bot in history[-3:]  # 최근 3개만, 3턴 맥락 유지
         ])
     
     # 히스토리 포함 프롬프트
