@@ -209,15 +209,7 @@ def ask_question_v2_with_history(query: str, history: list = None) -> str:
     취급품목: {row['취급품목']}
     디지털: {'가능' if row.get('디지털형 가맹 여부')=='Y' else '불가'}
     """
-    # ============================================
-    # 5. 히스토리 처리
-    # ============================================
-    history_text = ""
-    if history:
-        history_text = "\n".join([
-            f"사용자: {user}\n챗봇: {bot}"
-            for user, bot in history[-3:]
-        ])    
+  
     """
     대화 히스토리를 포함한 질문 답변
     
