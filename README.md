@@ -85,7 +85,7 @@ chatbot_project/
 │ ├─ chatbot.py	# 사용자 질의 처리 메인 로직
 │ │	(LLM 호출, 프롬프트 구성, 응답 생성)
 │ ├─ rag_setup.py	# RAG 파이프라인 구성
-│ │	(임베딩, 벡터DB 로딩, Retriever 설정)
+│ │	(임베딩, 벡터DB 로딩, 유사도 검색(similarity search) 테스트 및 k값 조정)
 │ └─ search_engine.py	# 검색 로직
 │	(키워드 검색, 벡터 검색, 하이브리드 검색)
 │
