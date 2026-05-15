@@ -116,9 +116,8 @@ chatbot_project/
 ```
 ## 📊 데이터 플로우
 
-![DataFlow](./DataFlow.png)
+![DataFlow](./docs/DataFlow.png)
 
 ## 🏗️ 시스템 아키텍처
 
-![시스템 아키텍처](./시스템%20아키텍처.png)
-
+![시스템 아키텍처](./docs/시스템%20아키텍처.png)
