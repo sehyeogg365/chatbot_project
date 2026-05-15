@@ -114,3 +114,11 @@ chatbot_project/
 │
 └─ requirements.txt	# Python 패키지 의존성 목록
 ```
+## 📊 데이터 플로우
+
+![DataFlow](./DataFlow.png)
+
+## 🏗️ 시스템 아키텍처
+
+![시스템 아키텍처](./시스템%20아키텍처.png)
+
