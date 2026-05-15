@@ -116,8 +116,12 @@ chatbot_project/
 ```
 ## 📊 데이터 플로우
 
-<img src="./docs/DataFlow.png" width="700" alt="DataFlow">
+<p align="center">
+  <img src="./docs/DataFlow.png" width="500" alt="DataFlow">
+</p>
 
 ## 🏗️ 시스템 아키텍처
 
-<img src="./docs/시스템 아키텍처.png" width="700" alt="시스템 아키텍처">
+<p align="center">
+  <img src="./docs/시스템 아키텍처.png" width="500" alt="시스템 아키텍처">
+</p>
