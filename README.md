@@ -50,7 +50,7 @@ streamlit run app.py
 OPENAI_API_KEY=your_api_key_here
 ```
 
-## 📁 프로젝트 구조
+## 5. 프로젝트 구조
 ```
 chatbot_project/
 ├─ .vscode/	# VS Code 설정 파일 (디버그, 워크스페이스 설정 등)
@@ -114,19 +114,19 @@ chatbot_project/
 │
 └─ requirements.txt	# Python 패키지 의존성 목록
 ```
-## 📊 데이터 플로우
+## 6. 데이터 플로우
 
 <p align="center">
   <img src="./docs/DataFlow.png" width="500" alt="DataFlow">
 </p>
 
-## 🏗️ 시스템 아키텍처
+## 7. 시스템 아키텍처
 
 <p align="center">
   <img src="./docs/시스템 아키텍처.png" width="500" alt="시스템 아키텍처">
 </p>
 
-## 🖥️ 실행화면
+## 8. 실행화면
 
 <p align="center">
   <img src="./docs/RAG 기반 답변.png" width="500" alt="RAG 기반 답변">
