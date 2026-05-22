@@ -125,3 +125,25 @@ chatbot_project/
 <p align="center">
   <img src="./docs/시스템 아키텍처.png" width="500" alt="시스템 아키텍처">
 </p>
+
+## 🖥️ 실행화면
+
+<p align="center">
+  <img src="./docs/RAG 기반 답변.png" width="500" alt="RAG 기반 답변">
+</p>
+
+<p align="center">
+  <img src="./docs/경기 자전거 가맹점 수.png" width="500" alt="경기 자전거 가맹점 수">
+</p>
+
+<p align="center">
+  <img src="./docs/서울 가맹점 수.png" width="500" alt="서울 가맹점 수">
+</p>
+
+<p align="center">
+  <img src="./docs/서울 가맹점 통계.png" width="500" alt="서울 가맹점 통계">
+</p>
+
+<p align="center">
+  <img src="./docs/서울 업종 비율.png" width="500" alt="서울 업종 비율">
+</p>
