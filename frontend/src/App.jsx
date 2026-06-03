@@ -4,12 +4,16 @@ import Chat from './components/Chat'
 import Manual from './pages/Manual'
 import QuestionGuide from './pages/QuestionGuide'
 import Architecture from './pages/Architecture'
+import DataInsights from './pages/DataInsights'
+import Report from './pages/Report'
 import styles from './App.module.css'
 
 const PAGES = {
   manual:       Manual,
   guide:        QuestionGuide,
   architecture: Architecture,
+  insights:     DataInsights,
+  report:       Report,
   chat:         Chat,
 }
 

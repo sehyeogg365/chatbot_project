@@ -4,6 +4,8 @@ const NAV_ITEMS = [
   { id: 'manual',       icon: '📖', label: '사용자 매뉴얼' },
   { id: 'guide',        icon: '💡', label: '질문 유형 가이드' },
   { id: 'architecture', icon: '🔄', label: 'DataFlow / 아키텍처' },
+  { id: 'insights',     icon: '📊', label: '데이터 인사이트' },
+  { id: 'report',       icon: '📄', label: '보고서' },
   { id: 'chat',         icon: '🏪', label: '챗봇' },
 ]
 
