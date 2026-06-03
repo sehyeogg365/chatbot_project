@@ -9,7 +9,7 @@ from langchain_openai import OpenAIEmbeddings
 
 def get_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-2.5-flash-lite",
         temperature=temperature,
     )
 

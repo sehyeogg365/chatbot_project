@@ -117,7 +117,7 @@ export default function Manual() {
           </div>
           <ul style={{ paddingLeft: '20px', color: '#4b5563', fontSize: '14px', lineHeight: '1.8' }}>
             <li><strong>OPENAI_API_KEY</strong>: 텍스트 임베딩용 (ChromaDB 벡터 검색)</li>
-            <li><strong>GOOGLE_API_KEY</strong>: Gemini 2.5 Flash LLM용</li>
+            <li><strong>GOOGLE_API_KEY</strong>: Gemini 2.5 Flash-Lite LLM용</li>
           </ul>
         </div>
       </div>
