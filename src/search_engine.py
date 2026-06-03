@@ -134,7 +134,10 @@ if __name__ == "__main__":
 from langchain_core.documents import Document
 
 # 1. 문서화 리스트 생성
-df1['full_text'] = df1.apply(lambda r: f"상호명: {r['가맹점명']} | 위치: {r['소재지']} | 주요품목: {r['취급품목']}", axis=1)
+df1['full_text'] = df1.apply(lambda r: (
+    f"상호명: {r['가맹점명']} | 위치: {r['소재지']} | 주요품목: {r['취급품목']} | "
+    f"디지털상품권: {'가능' if r['디지털형 가맹 여부'] == 'Y' else '불가'}"
+), axis=1)
 
 document_list = []
 

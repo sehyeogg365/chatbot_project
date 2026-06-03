@@ -63,7 +63,7 @@ print(f'전체 문서 개수: {len(se.document_list)}')
 
 # 4. 검색 테스트
 query = "서울 음식점"
-docs = vectorstore.similarity_search(query, k=3)#k = 몇개의 결과를 가져올 것인가?
+docs = vectorstore.similarity_search(query, k=3)# k값은 검색 결과로 몇 개의 유사한 문서를 반환할지 결정하는 매개변수입니다. 일반적으로 3~5 사이의 값을 사용하지만, 데이터셋의 크기와 다양성에 따라 조정할 수 있습니다. 너무 낮은 k값은 중요한 정보를 놓칠 수 있고, 너무 높은 k값은 관련성이 낮은 문서를 포함할 수 있습니다. 따라서 실험을 통해 최적의 k값을 찾는 것이 좋습니다.
 
 # print(docs[0].page_content)
 print(f"--- '{query}' 검색 결과 (총 {len(docs)}개 찾음)---")
