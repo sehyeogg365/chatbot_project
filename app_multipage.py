@@ -1,9 +1,9 @@
 import streamlit as st
 from multipage import MultiPage
-from page import intro
-from page import project1 as p1
-from page import project2 as p2
-from page import project3 as p3
+from ___old.page import intro
+from ___old.page import project1 as p1
+from ___old.page import project2 as p2
+from ___old.page import project3 as p3
 
 app = MultiPage()
 
