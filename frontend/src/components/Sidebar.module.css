@@ -1,0 +1,72 @@
+.sidebar {
+  width: 220px;
+  min-width: 220px;
+  height: 100vh;
+  background: #1e293b;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0 16px;
+  overflow: hidden;
+}
+
+.brand {
+  padding: 0 20px 20px;
+  border-bottom: 1px solid #334155;
+  margin-bottom: 12px;
+}
+
+.brandTitle {
+  color: #f1f5f9;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.brandSub {
+  color: #94a3b8;
+  font-size: 12px;
+  margin: 4px 0 0;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 10px;
+  flex: 1;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+}
+
+.navItem:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.navItem.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.icon {
+  font-size: 18px;
+  flex-shrink: 0;
+  line-height: 1;
+}
