@@ -1,132 +1,293 @@
 # 온누리상품권 가맹점 안내 챗봇
 
-## 🚀 실행 방법
+전국 온누리상품권 가맹점 데이터를 기반으로 자연어 질문에 답변하는 AI 챗봇 웹 애플리케이션입니다.  
+LangGraph ReAct Agent + Gemini 2.5 Flash LLM을 활용하며, React SPA 프론트엔드와 FastAPI 백엔드로 구성됩니다.
 
-### 1. 환경 설정
-```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
+---
 
-### 2. 데이터 준비
-1. 공공데이터포털에서 다음 데이터 다운로드:
-   - 소상공인시장진흥공단_전국_온누리상품권_가맹점_현황
-   - 소상공인시장진흥공단_온누리상품권_지역별_회수현황
-   - 소상공인시장진흥공단_온누리상품권_지역별_판매현황
+## 주요 기능
 
-2. `/` 폴더에 CSV 파일 저장
+| 기능 | 설명 |
+|------|------|
+| **AI 챗봇** | 지역·업종·디지털/지류 조건 검색, 자연어 유사도 검색, 상품권 정책 FAQ |
+| **PDF 보고서 생성** | 조건 필터링 후 가맹점 목록과 차트(막대·파이)가 포함된 PDF 다운로드 |
+| **데이터 인사이트** | 전국 17개 시도 가맹점 수·판매·회수 통계 대시보드 (Recharts) |
+| **아키텍처 뷰어** | 시스템 아키텍처 및 DataFlow 다이어그램 + 요청 처리 흐름 설명 |
+| **질문 가이드** | 챗봇에서 사용 가능한 질문 유형 예시 안내 |
+| **사용자 매뉴얼** | 서비스 전체 사용 방법 안내 |
 
-### 3. 전처리 및 벡터 DB 구축
-```bash
-# 노트북 순서대로 실행
-jupyter notebook
+---
 
-# 실행 순서:
-# 1. notebooks/01_data_exploration.ipynb
-# 2. notebooks/02_preprocessing.ipynb
-# 3. src/search_engine.py
-# 4. src/rag_setup.py  ⚠️ 10-20분 소요, API 비용 약 $0.30
+## 기술 스택
 
-```
+### 프론트엔드
+- **React 18** — SPA 구성
+- **Vite 5** — 빌드 도구 및 개발 서버
+- **Recharts** — 데이터 시각화 (막대·선·파이 차트)
+- **CSS Modules** — 컴포넌트별 스코프 스타일링
 
-### 4. 앱 실행
-```bash
-streamlit run app.py
-```
+### 백엔드
+- **FastAPI** — REST API 서버
+- **Uvicorn** — ASGI 서버
+- **Pydantic** — 요청/응답 데이터 검증
+- **mcp** - MCP Server Tool 인터페이스
+- **pandas** - 정형 데이터 검색/필터링
 
-## ⚠️ 주의사항
+### AI / LLM
+- **LangGraph** (`create_react_agent`) — Tool-calling ReAct Agent 구성
+- **LangChain** — LLM 추상화, 벡터스토어 연동
+- **Google Gemini 2.5 Flash Lite** — LLM (langchain-google-genai)
+- **OpenAI text-embedding-3-small** — 가맹점 텍스트 임베딩
 
-### 벡터 DB (vectordb/chroma_db/)
-- 용량: 약 500MB~1GB
-- Git에 포함되지 않음
-- 재구축 필요: `04_rag_setup.py` 실행
-- 소요 시간: 10-20분
-- API 비용: 약 $0.30
+### 데이터 / 저장
+- **Pandas** — 정형 데이터 필터링 및 통계
+- **ChromaDB** — 로컬 벡터 데이터베이스 (MMR 검색)
+- **CSV** — 전처리된 온누리 가맹점 원본 데이터
 
-### OpenAI API 키 필요
-```bash
-# .env 파일 생성
-OPENAI_API_KEY=your_api_key_here
-```
+### 보고서
+- **fpdf2** — PDF 생성 (한국어 맑은 고딕 폰트)
+- **Matplotlib** — 업종별 막대 차트 및 가맹 유형 파이 차트
 
-## 5. 프로젝트 구조
+### 개발 도구
+- **Jupyter Notebook** — 데이터 탐색 및 전처리 실험
+- **python-dotenv** — 환경 변수 관리
+
+---
+
+## 디렉토리 구조
+
 ```
 chatbot_project/
-├─ .vscode/	# VS Code 설정 파일 (디버그, 워크스페이스 설정 등)
+├── backend/                    # FastAPI 서버
+│   ├── main.py                 # 앱 초기화, CORS, 라우터 등록
+│   └── routers/
+│       ├── chat.py             # POST /api/chat  — 챗봇 응답
+│       ├── report.py           # GET  /api/report — PDF 보고서 생성
+│       └── search.py           # GET  /api/search/* — MCP 기반 가맹점 검색
 │
-├─ docs/	# 프로젝트 문서 (기획서, 설계 문서, 정리 노트 등)
+├── frontend/                   # React SPA (Vite)
+│   ├── src/
+│   │   ├── App.jsx             # 루트 컴포넌트, 페이지 라우팅
+│   │   ├── components/
+│   │   │   ├── Sidebar.jsx     # 사이드바 내비게이션
+│   │   │   └── Chat.jsx        # 챗봇 UI (메시지 버블, 입력창)
+│   │   └── pages/
+│   │       ├── Manual.jsx          # 사용자 매뉴얼
+│   │       ├── QuestionGuide.jsx   # 질문 유형 가이드
+│   │       ├── Architecture.jsx    # DataFlow / 시스템 아키텍처
+│   │       ├── DataInsights.jsx    # 데이터 인사이트 대시보드
+│   │       └── Report.jsx          # 보고서 생성 (PDF 다운로드)
+│   ├── index.html
+│   └── package.json
 │
-├─ notebooks/	# EDA, 전처리, 실험용 Jupyter Notebook
-│	# (ipynb 단계에서 검증 후 src 코드로 이전)
-│ ├─ 01_data_exploration.ipynb	# 기본통계량 확인
-│ └─ 02_preprocessing.ipynb	# 전처리 및 정제된 데이터 생성+테스트
-├─ page/	# Streamlit 멀티페이지 UI 구성 디렉터리
-│ ├─   pycache  /	# Python 캐시 파일 (자동 생성)
-│ ├─   init  .py	# page 패키지 인식용
-│ ├─ intro.pswp	# 임시 파일 (편집기 백업 파일로 보임)
-│ ├─ intro.py	# 서비스 소개 / 메인 설명 페이지
-│ ├─ project1.py	# 프로젝트 1 페이지 (Streamlit UI)
-│ ├─ project2.py	# 프로젝트 2 페이지 (Data flow)
-│ └─ project3.py	# 프로젝트 3 페이지 (챗봇 페이지)
+├── src/                        # 핵심 비즈니스 로직
+│   ├── chatbot.py              # LangGraph ReAct Agent + 3개 Tool 정의
+│   ├── llm_config.py           # Gemini LLM / OpenAI Embeddings 설정
+│   ├── search_engine.py        # 지역·시장명·복합 검색 함수, 통계 함수
+│   ├── rag_setup.py            # ChromaDB 벡터DB 구축 스크립트
+│   └── utils/
+│       ├── project1_desc.py    # 프로젝트 설명 텍스트
+│       ├── project2_desc.py
+│       └── project3_desc.py
 │
-├─ src/	# 핵심 비즈니스 로직 (UI와 분리)
- 
-│ ├─   pycache  /	# Python 캐시 파일
-│ ├─ utils/	# 공통 유틸 함수 및 상수
-│ │ ├─   pycache  /	# Python 캐시 파일 (자동 생성)
-│ │ ├─ project2_desc.py.pswp	# 임시 파일 (편집기 백업 파일로 보임)
-│ │ ├─ project1_desc.py	# 프로젝트 1 페이지 설명글
-│ │ ├─ project2_desc.py	# 프로젝트 2 페이지 설명글
-│ │ ├─ project3_desc.py	# 프로젝트 3 페이지 설명글
-│ │ └─   init  .py	# utils 패키지 인식용
-│ │
-│ ├─   init  .py	# src 패키지 인식용
-│ ├─ chatbot.py	# 사용자 질의 처리 메인 로직
-│ │	(LLM 호출, 프롬프트 구성, 응답 생성)
-│ ├─ rag_setup.py	# RAG 파이프라인 구성
-│ │	(임베딩, 벡터DB 로딩, 유사도 검색(similarity search) 테스트 및 k값 조정)
-│ └─ search_engine.py	# 검색 로직
-│	(키워드 검색, 벡터 검색, 하이브리드 검색)
+├── notebooks/
+│   ├── 01_data_exploration.ipynb   # 기본 통계량 확인 및 EDA
+│   └── 02_preprocessing.ipynb      # 전처리 및 cleaned_onnuri.csv 생성
 │
-├─ vectordb/	# 벡터 데이터베이스 저장 디렉터리
-│	# (FAISS / Chroma / 기타 로컬 벡터 저장소)
+├── mcp_server/                 # MCP 서버 클라이언트
+├── vectordb/chroma_db/         # ChromaDB 벡터 데이터베이스 (git 제외)
+├── docs/                       # 아키텍처 다이어그램, 실행 화면 이미지
 │
-├─ .env	# 환경 변수 파일 (API Key, 경로 등)
+├── cleaned_onnuri.csv          # 전처리 완료 가맹점 데이터 (~15만 건)
+├── area_onnuri.csv             # 지역별 가맹점 요약 데이터
+├── 가맹점_현황.csv              # 공공데이터 원본
+├── 판매_현황.csv                # 지역별 연도별 판매 현황 원본
+├── 회수_현황.csv                # 지역별 연도별 회수 현황 원본
 │
-├─ .gitignore	# Git 추적 제외 파일 목록
-│
-├─ api_keys.txt	# API 키 보관 파일 (실서비스에서는 사용 비권장)
-│
-├─ app.py	# Streamlit 앱 메인 엔트리 포인트
-│	# (단일 페이지 또는 기본 실행용)
-│
-├─ app_multipage.py	# Streamlit 멀티페이지 실행 진입점
-│	# page 디렉터리와 연결
-│
-├─ multipage.py	# 멀티페이지 라우팅 / 페이지 관리 로직
-│
-├─ area_onnuri.csv	# 온누리상품권 원본 데이터
-│
-├─ cleaned_onnuri.csv	# 전처리 완료된 온누리 데이터
-│
-├─ README.md	# 프로젝트 개요, 구조 설명, 실행 방법
-│
-└─ requirements.txt	# Python 패키지 의존성 목록
+├── .env                        # API 키 환경 변수 (git 제외)
+├── requirements.txt            # Python 패키지 목록
+└── README.md
 ```
-## 6. 데이터 플로우
+
+---
+
+## 시스템 아키텍처
+
+```
+[사용자 브라우저]
+      │  React SPA (Vite :5173)
+      │
+      ▼
+[FastAPI 백엔드 (:8000)]
+      ├── POST /api/chat   →  src/chatbot.py
+      │                        │
+      │                   LangGraph ReAct Agent
+      │                        ├── Tool 1: pandas_filter
+      │                        │     └── cleaned_onnuri.csv (Pandas)
+      │                        ├── Tool 2: rag_search
+      │                        │     └── vectordb/chroma_db (ChromaDB)
+      │                        └── Tool 3: faq_answer
+      │                              └── 인라인 FAQ DB
+      │                   Gemini 2.5 Flash (LLM 최종 응답)
+      │
+      ├── GET  /api/report  →  backend/routers/report.py
+      │                         └── Pandas 필터 + Matplotlib 차트 + fpdf2 PDF
+      │
+      └── GET  /api/search/* →  backend/routers/search.py
+                                  └── MCP 클라이언트 기반 검색
+```
+
+### 챗봇 요청 처리 흐름
+
+1. React UI 질문 입력 → `POST /api/chat`
+2. LangGraph Agent가 질문 유형 분석 → 적합한 Tool 선택
+3. Tool 실행 (Pandas 필터링 / ChromaDB 유사도 검색 / FAQ 매칭)
+4. Gemini 2.5 Flash가 Tool 결과를 바탕으로 자연어 답변 생성
+5. JSON 응답 → React 채팅 버블 렌더링
+
+### Agent Tool 구성
+
+| Tool | 역할 | 사용 시점 |
+|------|------|-----------|
+| `pandas_filter` | 지역·품목·디지털/지류 조건 정형 필터링, 통계 집계 | 구체적인 조건 검색, 개수 질문 |
+| `rag_search` | ChromaDB 벡터 유사도 검색 (MMR) | "분위기 좋은 카페" 등 자연어 묘사 |
+| `faq_answer` | 상품권 정책·사용법·규정 FAQ | 유효기간, 환불, 할인율, 구입처 등 |
+
+---
+
+## 실행 방법
+
+### 1. 사전 준비
+
+```bash
+# conda 가상환경 생성 및 활성화
+conda create -n new_env python=3.11
+conda activate new_env
+
+# Python 패키지 설치
+pip install -r requirements.txt
+
+# Node.js 패키지 설치 (프론트엔드)
+cd frontend
+npm install
+cd ..
+```
+
+### 2. 환경 변수 설정
+
+프로젝트 루트에 `.env` 파일 생성:
+
+```env
+OPENAI_API_KEY=sk-...
+GOOGLE_API_KEY=AIza...
+```
+
+### 3. 벡터DB 구축 (최초 1회)
+
+```bash
+# 노트북으로 데이터 전처리
+jupyter notebook
+# 순서: 01_data_exploration.ipynb → 02_preprocessing.ipynb
+
+# 벡터DB 생성 (약 10~20분, OpenAI API 비용 약 $0.30)
+python -m src.rag_setup
+```
+
+> `vectordb/chroma_db/` 가 이미 존재하면 기존 DB를 재사용합니다.
+
+### 4. 서버 실행
+
+터미널 1 — 백엔드:
+
+```bash
+uvicorn backend.main:app --reload
+```
+
+터미널 2 — 프론트엔드 개발 서버:
+
+```bash
+cd frontend
+npm run dev
+```
+
+브라우저에서 `http://localhost:5173` 접속
+
+---
+
+## API 엔드포인트
+
+| Method | Path | 설명 |
+|--------|------|------|
+| `POST` | `/api/chat` | 챗봇 질문 처리 |
+| `GET` | `/api/report` | PDF 보고서 생성 및 다운로드 |
+| `GET` | `/api/search/area` | 지역 기반 가맹점 검색 |
+| `GET` | `/api/search/name` | 시장명 기반 검색 |
+| `GET` | `/api/search/combined` | 지역+시장명 복합 검색 |
+| `GET` | `/api/search/stores` | 지역·업종·디지털 복합 검색 |
+| `GET` | `/api/search/statistics` | 지역 통계 조회 |
+| `GET` | `/health` | 서버 상태 확인 |
+
+### POST /api/chat 요청 예시
+
+```json
+{
+  "message": "서울 디지털 가능한 음식점 알려줘",
+  "history": [["이전 질문", "이전 답변"]]
+}
+```
+
+### GET /api/report 파라미터
+
+| 파라미터 | 타입 | 예시 | 설명 |
+|----------|------|------|------|
+| `region` | string | `서울` | 지역명 (빈 값 = 전체) |
+| `category` | string | `카페` | 업종 (빈 값 = 전체) |
+| `digital_only` | bool | `true` | 디지털 가맹점만 |
+| `paper_only` | bool | `false` | 지류 가맹점만 |
+
+---
+
+## 데이터
+
+### cleaned_onnuri.csv 주요 컬럼
+
+| 컬럼명 | 설명 |
+|--------|------|
+| `가맹점명` | 상호명 |
+| `소재지` | 주소 (지역 필터 기준) |
+| `취급품목` | 업종 분류 |
+| `디지털형 가맹 여부` | `Y` / `N` |
+| `지류형 가맹 여부` | `Y` / `N` |
+| `소속 시장명(또는 상점가)` | 소속 전통시장명 |
+
+- 전국 약 **15만 건** 가맹점 데이터
+- 원본: 공공데이터포털 소상공인시장진흥공단 제공
+
+---
+
+## 주의사항
+
+- **벡터DB** (`vectordb/chroma_db/`): 용량 약 500MB~1GB, git 추적 제외
+- **API 키**: `.env` 파일은 git에 포함하지 않음. OpenAI·Google API 키 모두 필요
+- **한국어 PDF**: Windows 맑은 고딕 폰트 (`C:\Windows\Fonts\malgun.ttf`) 사용 — Windows 환경 전용
+
+---
+
+## 데이터 플로우
 
 <p align="center">
-  <img src="./docs/DataFlow.png" width="500" alt="DataFlow">
+  <img src="./docs/DataFlow.png" width="600" alt="DataFlow">
 </p>
 
-## 7. 시스템 아키텍처
+## 시스템 아키텍처 다이어그램
 
 <p align="center">
-  <img src="./docs/시스템 아키텍처.png" width="500" alt="시스템 아키텍처">
+  <img src="./docs/시스템 아키텍처.png" width="600" alt="시스템 아키텍처">
 </p>
 
-## 8. 실행화면
+## 실행 화면
+
+### 리팩토링 전
 
 <p align="center">
   <img src="./docs/RAG 기반 답변.png" width="500" alt="RAG 기반 답변">
@@ -146,4 +307,94 @@ chatbot_project/
 
 <p align="center">
   <img src="./docs/서울 업종 비율.png" width="500" alt="서울 업종 비율">
+</p>
+
+### 리팩토링 후
+
+<p align="center">
+  <img src="./docs/refactor/사용자 매뉴얼.png" width="500" alt="사용자 매뉴얼 페이지 - 가상환경 구축 안내">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/사용자 매뉴얼(2).png" width="500" alt="사용자 매뉴얼 페이지 - 프론트엔드 환경 설정 및 빠른 시작">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/질문 유형 가이드.png" width="500" alt="질문 유형 가이드 페이지 - 추천/검색 질문 예시">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/질문 유형 가이드(2).png" width="500" alt="질문 유형 가이드 페이지 - 통계 질문 예시">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/시스템 아키텍처.png" width="500" alt="DataFlow / 아키텍처 페이지 - 시스템 아키텍처 다이어그램">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/DataFlow.png" width="500" alt="DataFlow / 아키텍처 페이지 - 데이터 흐름 다이어그램">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/데이터 인사이트.png" width="500" alt="데이터 인사이트 대시보드 - 지역별 가맹점 수">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/데이터 인사이트(2).png" width="500" alt="데이터 인사이트 대시보드 - 연도별 판매·회수금액 추이">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/보고서 생성.png" width="500" alt="보고서 생성 페이지 - 지역/업종/가맹 유형 조건 선택">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/보고서1pg.png" width="500" alt="생성된 PDF 보고서 1페이지 - 적용 필터 및 요약 통계">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/보고서2pg.png" width="500" alt="생성된 PDF 보고서 2페이지 - 가맹 유형 분포 파이 차트">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/보고서3pg.png" width="500" alt="생성된 PDF 보고서 3페이지 - 가맹점 목록">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/보고서4pg.png" width="500" alt="생성된 PDF 보고서 4페이지 - 가맹점 목록 (계속)">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/챗봇 디지털 불가능.png" width="500" alt="챗봇 - 서울 디지털 상품권 사용 불가 가맹점 안내">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/서울 음식점 알려줘.png" width="500" alt="챗봇 - 서울 음식점 가맹점 안내">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/서울 음식점 디지털.png" width="500" alt="챗봇 - 서울 한식점 디지털 상품권 사용 가능 여부 안내">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/서울 가맹점 업종 통계.png" width="500" alt="챗봇 - 서울 가맹점 업종별 통계 안내">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/디지털 상품권 안되는 곳.png" width="500" alt="챗봇 - 디지털 상품권 사용 불가 가맹점 목록 안내">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/서울 카페 추천.png" width="500" alt="챗봇 - 서울 카페 추천">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/서울 업종 카페 추천.png" width="500" alt="챗봇 - 조건 기반 서울 카페 가맹점 추천">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/정책 검색.png" width="500" alt="챗봇 - 상품권 정책 FAQ 검색">
+</p>
+
+<p align="center">
+  <img src="./docs/refactor/상품권 사용처 유효기간.png" width="500" alt="챗봇 - 상품권 사용처 및 유효기간 안내">
 </p>
