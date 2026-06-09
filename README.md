@@ -1,3 +1,5 @@
+> **현재 리팩토링 진행중입니다.**
+
 # 온누리상품권 가맹점 안내 챗봇
 
 전국 온누리상품권 가맹점 데이터를 기반으로 자연어 질문에 답변하는 AI 챗봇 웹 애플리케이션입니다.  
@@ -275,126 +277,169 @@ npm run dev
 
 ## 데이터 플로우
 
+### 리팩토링 전
+DataFlow<br>
 <p align="center">
   <img src="./docs/DataFlow.png" width="600" alt="DataFlow">
 </p>
 
+### 리팩토링 후
+리팩토링 DataFlow<br>
+<p align="center">
+  <img src="./docs/refactor/리팩토링 DataFlow.png" width="600" alt="리팩토링 DataFlow">
+</p>
+
 ## 시스템 아키텍처 다이어그램
 
+### 리팩토링 전
+시스템 아키텍처<br>
 <p align="center">
   <img src="./docs/시스템 아키텍처.png" width="600" alt="시스템 아키텍처">
 </p>
 
+### 리팩토링 후
+리팩토링 시스템 아키텍처<br>
+<p align="center">
+  <img src="./docs/refactor/리팩토링 시스템 아키텍처.png" width="600" alt="리팩토링 시스템 아키텍처">
+</p>
+
+## 시연 영상
+
+<p align="center">
+  <video src="./docs/refactor/시연영상.mp4" controls width="700"></video>
+</p>
+
+---
+
 ## 실행 화면
 
 ### 리팩토링 전
-
+RAG 기반 추천 답변<br>
 <p align="center">
   <img src="./docs/RAG 기반 답변.png" width="500" alt="RAG 기반 답변">
 </p>
-
+지역+업종 답변 <br>
 <p align="center">
   <img src="./docs/경기 자전거 가맹점 수.png" width="500" alt="경기 자전거 가맹점 수">
 </p>
-
+지역별 가맹점 수<br>
 <p align="center">
   <img src="./docs/서울 가맹점 수.png" width="500" alt="서울 가맹점 수">
 </p>
 
-<p align="center">
-  <img src="./docs/서울 가맹점 통계.png" width="500" alt="서울 가맹점 통계">
-</p>
-
+지역별 업종 비율<br>
 <p align="center">
   <img src="./docs/서울 업종 비율.png" width="500" alt="서울 업종 비율">
 </p>
 
 ### 리팩토링 후
 
+사용자 매뉴얼<br>
 <p align="center">
   <img src="./docs/refactor/사용자 매뉴얼.png" width="500" alt="사용자 매뉴얼 페이지 - 가상환경 구축 안내">
 </p>
 
+사용자 매뉴얼(2)<br>
 <p align="center">
   <img src="./docs/refactor/사용자 매뉴얼(2).png" width="500" alt="사용자 매뉴얼 페이지 - 프론트엔드 환경 설정 및 빠른 시작">
 </p>
 
+질문 유형 가이드<br>
 <p align="center">
   <img src="./docs/refactor/질문 유형 가이드.png" width="500" alt="질문 유형 가이드 페이지 - 추천/검색 질문 예시">
 </p>
 
+질문 유형 가이드(2)<br>
 <p align="center">
   <img src="./docs/refactor/질문 유형 가이드(2).png" width="500" alt="질문 유형 가이드 페이지 - 통계 질문 예시">
 </p>
 
+시스템 아키텍처<br>
 <p align="center">
   <img src="./docs/refactor/시스템 아키텍처.png" width="500" alt="DataFlow / 아키텍처 페이지 - 시스템 아키텍처 다이어그램">
 </p>
 
+DataFlow<br>
 <p align="center">
   <img src="./docs/refactor/DataFlow.png" width="500" alt="DataFlow / 아키텍처 페이지 - 데이터 흐름 다이어그램">
 </p>
 
+데이터 인사이트<br>
 <p align="center">
   <img src="./docs/refactor/데이터 인사이트.png" width="500" alt="데이터 인사이트 대시보드 - 지역별 가맹점 수">
 </p>
 
+데이터 인사이트(2)<br>
 <p align="center">
   <img src="./docs/refactor/데이터 인사이트(2).png" width="500" alt="데이터 인사이트 대시보드 - 연도별 판매·회수금액 추이">
 </p>
 
+보고서 생성<br>
 <p align="center">
   <img src="./docs/refactor/보고서 생성.png" width="500" alt="보고서 생성 페이지 - 지역/업종/가맹 유형 조건 선택">
 </p>
 
+보고서1pg<br>
 <p align="center">
   <img src="./docs/refactor/보고서1pg.png" width="500" alt="생성된 PDF 보고서 1페이지 - 적용 필터 및 요약 통계">
 </p>
 
+보고서2pg<br>
 <p align="center">
   <img src="./docs/refactor/보고서2pg.png" width="500" alt="생성된 PDF 보고서 2페이지 - 가맹 유형 분포 파이 차트">
 </p>
 
+보고서3pg<br>
 <p align="center">
   <img src="./docs/refactor/보고서3pg.png" width="500" alt="생성된 PDF 보고서 3페이지 - 가맹점 목록">
 </p>
 
+보고서4pg<br>
 <p align="center">
   <img src="./docs/refactor/보고서4pg.png" width="500" alt="생성된 PDF 보고서 4페이지 - 가맹점 목록 (계속)">
 </p>
 
+디지털 상품권 불가능 가맹점 질문<br>
 <p align="center">
   <img src="./docs/refactor/챗봇 디지털 불가능.png" width="500" alt="챗봇 - 서울 디지털 상품권 사용 불가 가맹점 안내">
 </p>
 
+RAG 기반 추천 답변<br>
 <p align="center">
   <img src="./docs/refactor/서울 음식점 알려줘.png" width="500" alt="챗봇 - 서울 음식점 가맹점 안내">
 </p>
 
+지역 + 업종 + 디지털 사용 가능여부<br>
 <p align="center">
   <img src="./docs/refactor/서울 음식점 디지털.png" width="500" alt="챗봇 - 서울 한식점 디지털 상품권 사용 가능 여부 안내">
 </p>
 
+지역 업종 통계<br>
 <p align="center">
   <img src="./docs/refactor/서울 가맹점 업종 통계.png" width="500" alt="챗봇 - 서울 가맹점 업종별 통계 안내">
 </p>
 
+디지털 상품권 안되는 곳<br>
 <p align="center">
   <img src="./docs/refactor/디지털 상품권 안되는 곳.png" width="500" alt="챗봇 - 디지털 상품권 사용 불가 가맹점 목록 안내">
 </p>
 
+지역 + 업종 추천 답변<br>
 <p align="center">
   <img src="./docs/refactor/서울 카페 추천.png" width="500" alt="챗봇 - 서울 카페 추천">
 </p>
 
+서울 업종 카페 추천<br>
 <p align="center">
   <img src="./docs/refactor/서울 업종 카페 추천.png" width="500" alt="챗봇 - 조건 기반 서울 카페 가맹점 추천">
 </p>
 
+정책 검색<br>
 <p align="center">
   <img src="./docs/refactor/정책 검색.png" width="500" alt="챗봇 - 상품권 정책 FAQ 검색">
 </p>
 
+상품권 사용처 유효기간<br>
 <p align="center">
   <img src="./docs/refactor/상품권 사용처 유효기간.png" width="500" alt="챗봇 - 상품권 사용처 및 유효기간 안내">
 </p>
