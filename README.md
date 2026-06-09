@@ -306,7 +306,7 @@ DataFlow<br>
 ## 시연 영상
 
 <p align="center">
-  <video src="./docs/refactor/시연영상.mp4" controls width="700"></video>
+  <img src="./docs/refactor/시연영상.gif" width="700" alt="시연 영상">
 </p>
 
 ---
