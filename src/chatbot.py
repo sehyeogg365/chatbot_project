@@ -32,7 +32,7 @@ df = pd.read_csv("cleaned_onnuri.csv")
 
 embeddings = get_embeddings()
 vectorstore = Chroma(
-    persist_directory="vectordb/chroma_db",
+    persist_directory="vectordb/chroma_db",# 이렇게 쓰면 기존 DB 불러오기
     embedding_function=embeddings,
 )
 retriever = vectorstore.as_retriever(

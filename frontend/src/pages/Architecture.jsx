@@ -20,7 +20,7 @@ export default function Architecture() {
           <h2 className={styles.sectionTitle}>🏗 시스템 아키텍처</h2>
           <div className={styles.archImageWrap}>
             <img
-              src="/docs/시스템 아키텍처.png"
+              src="./docs/refactor/리팩토링 시스템 아키텍처.png"
               alt="시스템 아키텍처"
               onError={(e) => {
                 e.currentTarget.parentElement.style.display = 'none'
@@ -35,7 +35,7 @@ export default function Architecture() {
           <h2 className={styles.sectionTitle}>📊 DataFlow</h2>
           <div className={styles.archImageWrap}>
             <img
-              src="/docs/DataFlow.png"
+              src="./docs/refactor/리팩토링 DataFlow.png"
               alt="DataFlow"
               onError={(e) => {
                 e.currentTarget.parentElement.style.display = 'none'
