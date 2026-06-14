@@ -27,7 +27,7 @@ def get_called_tools(query: str) -> set[str]:
         ("서울 디지털 가능한 음식점", "pandas_filter"),
         ("경기 자전거 매장 몇 개", "pandas_filter"),
         ("디지털 상품권 어떻게 써", "faq_answer"),
-        ("서울 한식 추천해줘", "rag_search"),
+        ("분위기 좋은 한식집 추천해줘", "rag_search"),
         ("부산 카페 디지털 가능", "pandas_filter"),
     ],
 )
