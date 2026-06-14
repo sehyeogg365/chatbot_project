@@ -8,7 +8,7 @@ import shutil
 import time
 from tqdm import tqdm
 from langchain_community.vectorstores import Chroma
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_openai import OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import search_engine as se
 '''
@@ -32,8 +32,8 @@ import search_engine as se
 
 5단계: LLM 응답 - "최종 답변 생성"
 '''
-# 임베딩 모델 설정
-embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+# 임베딩 모델 설정 (무료 Gemini 임베딩 대신 OpenAI 임베딩 사용)
+embeddings = OpenAIEmbeddings(model="text-embedding-3-small")
 
 db_path = "vectordb/chroma_db"
 
@@ -50,7 +50,7 @@ batch_size = 1000
 sample_docs = splits
 
 print(f"원본 문서: {len(se.document_list)}, 청킹 후: {len(sample_docs)}개")
-print("1번째 배치로 DB 생성 중... (Google API 호출)")
+print("1번째 배치로 DB 생성 중... (OpenAI API 호출)")
 
 vectorstore = Chroma.from_documents(
     documents=sample_docs[:batch_size],# 처음 1000개로 DB 생성

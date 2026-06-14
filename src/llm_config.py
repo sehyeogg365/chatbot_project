@@ -3,7 +3,8 @@ from pathlib import Path
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import OpenAIEmbeddings
 
 
 def get_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:# -> ChatGoogleGenerativeAI:
@@ -13,7 +14,7 @@ def get_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:# -> ChatGoogleG
     )
 
 
-def get_embeddings() -> GoogleGenerativeAIEmbeddings:# -> GoogleGenerativeAIEmbeddings:
-    return GoogleGenerativeAIEmbeddings(
-        model="models/gemini-embedding-001",
+def get_embeddings() -> OpenAIEmbeddings:# -> OpenAIEmbeddings:
+    return OpenAIEmbeddings(
+        model="text-embedding-3-small",
     )
