@@ -13,6 +13,7 @@ from pathlib import Path
 current_dir = Path(__file__).resolve().parent
 load_dotenv(current_dir.parent / "api_keys.txt")
 
+import os
 import pandas as pd
 from typing import Optional
 
@@ -20,6 +21,7 @@ from langgraph.prebuilt import create_react_agent
 from langchain_community.vectorstores import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
+from langsmith import traceable
 
 from src.llm_config import get_llm, get_embeddings
 
@@ -27,6 +29,9 @@ from src.llm_config import get_llm, get_embeddings
 # 초기화
 # ──────────────────────────────────────────────────────────────────
 print("1️⃣ 초기화 중...")
+
+if os.environ.get("LANGCHAIN_TRACING_V2") == "true":# LangSmith 트레이싱 활성화 여부 확인
+    print(f"🔍 LangSmith 트레이싱 활성화 (프로젝트: {os.environ.get('LANGCHAIN_PROJECT')})")
 
 df = pd.read_csv("cleaned_onnuri.csv")
 
@@ -236,6 +241,7 @@ print("✅ Tool-calling Agent 준비 완료!")
 # ──────────────────────────────────────────────────────────────────
 # 공개 API (backend/routers/chat.py 호환)
 # ──────────────────────────────────────────────────────────────────
+@traceable(name="process_query")# LangSmith에서 이 함수의 실행을 추적
 def process_query(query: str, history: list) -> str:
     """
     사용자 질문 처리 진입점.
@@ -248,7 +254,10 @@ def process_query(query: str, history: list) -> str:
     messages.append(HumanMessage(content=query))
 
     try:
-        result = agent_app.invoke({"messages": messages})
+        result = agent_app.invoke(
+            {"messages": messages},
+            config={"run_name": "onnuri_agent", "tags": ["chatbot"]},# LangSmith에서 실행 이름과 태그 지정 언제 호출, 어떤 도구 사용했는지, 응답 시간, 토큰 몇 개 썼는지 추적 가능
+        )
         content = result["messages"][-1].content
         # Gemini가 content를 list[dict] 형태로 반환하는 경우 처리
         if isinstance(content, list):
