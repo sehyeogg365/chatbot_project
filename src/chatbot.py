@@ -42,7 +42,7 @@ vectorstore = Chroma(
 )
 retriever = vectorstore.as_retriever(
     search_type="mmr",
-    search_kwargs={"k": 10, "lambda_mult": 0.7},
+    search_kwargs={"k": 5, "lambda_mult": 0.7},
 )
 
 llm = get_llm(temperature=0.3)

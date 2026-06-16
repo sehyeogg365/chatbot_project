@@ -43,7 +43,7 @@ if os.path.exists(db_path):
     print(f"기존 DB 삭제 완료: {db_path}")
 
 # 청킹
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
 splits = text_splitter.split_documents(se.document_list[:5000])
 
 batch_size = 1000
