@@ -1,10 +1,11 @@
 '''
 목적: Tool-calling Agent 기반 챗봇 로직
 구조:
-  Tool 1 (pandas_filter) : 지역 / 품목 / 디지털·지류 가맹 여부 정형 필터링
-  Tool 2 (rag_search)    : 벡터 유사도 검색 (자연어·분위기 기반)
-  Tool 3 (faq_answer)    : 상품권 정책·사용법 FAQ
-  create_agent           : 복합 조건 자동 분기 및 다중 Tool 호출
+  Tool 1 (pandas_filter)    : 지역 / 품목 / 디지털·지류 가맹 여부 정형 필터링
+  Tool 2 (rag_search)       : 벡터 유사도 검색 (자연어·분위기 기반)
+  Tool 3 (faq_answer)       : 상품권 정책·사용법 FAQ
+  Tool 4 (market_analysis)  : 창업 예정자를 위한 지역·업종 입지 경쟁도 분석
+  create_agent              : 복합 조건 자동 분기 및 다중 Tool 호출
 '''
 
 from dotenv import load_dotenv
@@ -204,14 +205,79 @@ def faq_answer(question: str) -> str:
 
 
 # ──────────────────────────────────────────────────────────────────
+# Tool 4: 입지 분석 (창업 예정자 대상)
+# ──────────────────────────────────────────────────────────────────
+@tool
+def market_analysis(location: str, category: str) -> str:
+    """
+    특정 지역에 특정 업종 가맹점을 차렸을 때의 입지 경쟁도를 분석합니다.
+    "이 지역에 카페 차리면 어때?", "여기 창업하기 좋아?", "경쟁이 심한가요?" 같은
+    창업 입지 분석 질문에 사용하세요.
+
+    - location: 지역명 (예: 서울, 경기, 부산). 데이터는 시/도 단위만 지원합니다.
+    - category: 업종 (예: 카페, 음식점, 자전거, 미용, 의류, 고기).
+
+    해당 지역의 업종별 가맹점 수, 전국 시/도 평균 대비 포화도,
+    디지털 상품권 사용 가능 비율, 상대적으로 가맹점이 적은 지역을 안내합니다.
+    """
+    if location not in AREAS:
+        return f"'{location}'은 지원되는 지역이 아닙니다. 지원 지역: {', '.join(AREAS)}"
+
+    keywords = CATEGORY_EXPANSIONS.get(category, [category])
+    mask = pd.Series([False] * len(df), index=df.index)
+    for kw in keywords:
+        mask |= df["취급품목"].str.contains(kw, na=False, case=False)
+    category_df = df[mask]
+
+    if len(category_df) == 0:
+        return f"'{category}' 업종에 해당하는 가맹점 데이터가 없습니다."
+
+    counts_by_area = category_df.groupby("소재지").size()
+    target_count = int(counts_by_area.get(location, 0))
+    national_avg = counts_by_area.reindex(AREAS, fill_value=0).mean()
+
+    if target_count == 0:
+        return f"{location}에는 '{category}' 업종 가맹점이 없습니다. (전국 시/도 평균: {national_avg:.0f}곳)"
+
+    ratio = target_count / national_avg if national_avg > 0 else 0
+
+    target_category_df = category_df[category_df["소재지"] == location]
+    digital_count = (target_category_df["디지털형 가맹 여부"] == "Y").sum()
+    digital_ratio = digital_count / target_count * 100
+
+    lower_areas = (
+        counts_by_area.reindex(AREAS, fill_value=0)
+        .drop(index=location, errors="ignore")
+        .sort_values()
+        .head(3)
+    )
+    lower_areas_str = ", ".join(f"{area}({cnt}곳)" for area, cnt in lower_areas.items())
+
+    if ratio >= 1.3:
+        saturation = "경쟁이 치열한 편"
+    elif ratio <= 0.7:
+        saturation = "경쟁이 낮은 편"
+    else:
+        saturation = "경쟁이 보통 수준"
+
+    return (
+        f"{location} '{category}' 가맹점은 {target_count}곳으로, "
+        f"전국 평균({national_avg:.0f}곳) 대비 약 {ratio:.1f}배로 {saturation}입니다.\n"
+        f"이 중 디지털 상품권 사용 가능 비율은 {digital_ratio:.0f}%입니다.\n"
+        f"상대적으로 가맹점 수가 적은 지역: {lower_areas_str}"
+    )
+
+
+# ──────────────────────────────────────────────────────────────────
 # Agent 초기화
 # ──────────────────────────────────────────────────────────────────
 SYSTEM_PROMPT = """당신은 온누리상품권 가맹점 안내 전문 AI 어시스턴트입니다.
 
 사용 가능한 도구:
-1. pandas_filter  — 지역·품목·디지털/지류 조건으로 정확한 가맹점 필터링 (복합 조건에 강함)
-2. rag_search     — 자연어·분위기 설명 기반 유사도 검색
-3. faq_answer     — 상품권 정책·사용법·규정 안내
+1. pandas_filter     — 지역·품목·디지털/지류 조건으로 정확한 가맹점 필터링 (복합 조건에 강함)
+2. rag_search        — 자연어·분위기 설명 기반 유사도 검색
+3. faq_answer        — 상품권 정책·사용법·규정 안내
+4. market_analysis   — 창업 예정자를 위한 지역·업종 입지 경쟁도 분석 (가맹점 수, 포화도, 디지털 비율)
 
 도구 선택 기준:
 • 지역, 품목, 디지털/지류 조건이 포함된 질문 → pandas_filter 우선
@@ -220,6 +286,10 @@ SYSTEM_PROMPT = """당신은 온누리상품권 가맹점 안내 전문 AI 어�
 • 통계 ("몇 개", "얼마나") → pandas_filter로 집계 후 답변
 • 정책·사용법 질문 → faq_answer
 • 조건 검색 + 정책 혼합 질문 → 두 도구 모두 호출 가능
+• "창업", "차리면 어때", "입지", "경쟁", "장사 잘 될까" 같은 창업 입지 분석 질문 → market_analysis 사용
+  (질문에서 지역과 업종을 추출해 location, category로 전달하세요. 이 도구만 지역·업종이 반드시 필요합니다)
+• 주의: rag_search와 pandas_filter는 지역이 없어도 그대로 호출하세요. market_analysis 도구가 있다고 해서
+  다른 도구 호출 전에 지역을 먼저 되묻지 마세요.
 
 답변 원칙:
 1. 도구 결과를 자연스럽게 요약하여 답변하세요.
@@ -227,7 +297,7 @@ SYSTEM_PROMPT = """당신은 온누리상품권 가맹점 안내 전문 AI 어�
 3. 결과가 많으면 상위 5~10개 소개 후 전체 개수를 안내하세요.
 4. 이전 대화 맥락을 유지하여 자연스럽게 이어가세요."""
 
-tools = [pandas_filter, rag_search, faq_answer]
+tools = [pandas_filter, rag_search, faq_answer, market_analysis]
 
 agent_app = create_react_agent(
     model=llm,
