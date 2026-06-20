@@ -375,6 +375,11 @@ DataFlow<br>
   <img src="./docs/refactor/시연영상.gif" width="700" alt="시연 영상">
 </p>
 
+입지 분석 시연<br>
+<p align="center">
+  <img src="./docs/refactor/입지분석.gif" width="700" alt="입지 분석 시연 영상">
+</p>
+
 ---
 
 ## 실행 화면
@@ -509,3 +514,9 @@ RAG 기반 추천 답변<br>
 <p align="center">
   <img src="./docs/refactor/상품권 사용처 유효기간.png" width="500" alt="챗봇 - 상품권 사용처 및 유효기간 안내">
 </p>
+
+입지분석<br>
+<p align="center">
+  <img src="./docs/refactor/입지분석.png" width="500" alt="챗봇 - 입지분석">
+</p>
+
