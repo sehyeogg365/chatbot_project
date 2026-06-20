@@ -11,7 +11,7 @@ LangGraph ReAct Agent + Gemini 2.5 Flash LLM을 활용하며, React SPA 프론�
 
 | 기능 | 설명 |
 |------|------|
-| **AI 챗봇** | 지역·업종·디지털/지류 조건 검색, 자연어 유사도 검색, 상품권 정책 FAQ |
+| **AI 챗봇** | 지역·업종·디지털/지류 조건 검색, 자연어 유사도 검색, 상품권 정책 FAQ, 창업 입지 경쟁도 분석 |
 | **PDF 보고서 생성** | 조건 필터링 후 가맹점 목록과 차트(막대·파이)가 포함된 PDF 다운로드 |
 | **데이터 인사이트** | 전국 17개 시도 가맹점 수·판매·회수 통계 대시보드 (Recharts) |
 | **아키텍처 뷰어** | 시스템 아키텍처 및 DataFlow 다이어그램 + 요청 처리 흐름 설명 |
@@ -83,7 +83,7 @@ chatbot_project/
 │   └── package.json
 │
 ├── src/                        # 핵심 비즈니스 로직
-│   ├── chatbot.py              # LangGraph ReAct Agent + 3개 Tool 정의
+│   ├── chatbot.py              # LangGraph ReAct Agent + 4개 Tool 정의
 │   ├── llm_config.py           # Gemini LLM / OpenAI Embeddings 설정
 │   ├── search_engine.py        # 지역·시장명·복합 검색 함수, 통계 함수
 │   ├── rag_setup.py            # ChromaDB 벡터DB 구축 스크립트
@@ -128,8 +128,10 @@ chatbot_project/
       │                        │     └── cleaned_onnuri.csv (Pandas)
       │                        ├── Tool 2: rag_search
       │                        │     └── vectordb/chroma_db (ChromaDB)
-      │                        └── Tool 3: faq_answer
-      │                              └── 인라인 FAQ DB
+      │                        ├── Tool 3: faq_answer
+      │                        │     └── 인라인 FAQ DB
+      │                        └── Tool 4: market_analysis
+      │                              └── cleaned_onnuri.csv 집계 (Pandas)
       │                   Gemini 2.5 Flash (LLM 최종 응답)
       │
       ├── GET  /api/report  →  backend/routers/report.py
@@ -143,7 +145,7 @@ chatbot_project/
 
 1. React UI 질문 입력 → `POST /api/chat`
 2. LangGraph Agent가 질문 유형 분석 → 적합한 Tool 선택
-3. Tool 실행 (Pandas 필터링 / ChromaDB 유사도 검색 / FAQ 매칭)
+3. Tool 실행 (Pandas 필터링 / ChromaDB 유사도 검색 / FAQ 매칭 / 입지 경쟁도 분석)
 4. Gemini 2.5 Flash가 Tool 결과를 바탕으로 자연어 답변 생성
 5. JSON 응답 → React 채팅 버블 렌더링
 
@@ -154,6 +156,7 @@ chatbot_project/
 | `pandas_filter` | 지역·품목·디지털/지류 조건 정형 필터링, 통계 집계 | 구체적인 조건 검색, 개수 질문 |
 | `rag_search` | ChromaDB 벡터 유사도 검색 (MMR) | "분위기 좋은 카페" 등 자연어 묘사 |
 | `faq_answer` | 상품권 정책·사용법·규정 FAQ | 유효기간, 환불, 할인율, 구입처 등 |
+| `market_analysis` | 지역·업종 입지 경쟁도 분석 (가맹점 수, 전국 평균 대비 포화도, 디지털 비율) | "이 지역에 카페 차리면 어때?", "경쟁이 심한가요?" 등 창업 입지 질문 |
 
 ---
 
