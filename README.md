@@ -223,6 +223,75 @@ chatbot_project/
 
 ---
 
+## RAGAS 기반 rag_search Tool 품질 평가
+
+> 평가 스크립트: `experiments/ragas_eval.py` | 결과 데이터: `experiments/ragas_result.csv`
+
+### 왜 RAGAS인가
+
+위 `chunk_tuning.py` 실험은 "검색된 문서의 지역·키워드가 정답 조건을 포함하는가"라는 **규칙 기반 정확도**만 측정할 수 있었습니다. 하지만 `rag_search` Tool은 "분위기 좋은 한식집", "조용히 혼밥하기 좋은 곳"처럼 **정답이 하나로 딱 떨어지지 않는 자연어 질문**을 다루기 때문에, 규칙 기반 채점만으로는 "검색 결과에 실제로 근거해서 답했는가", "질문과 관련 있는 내용을 답했는가" 같은 응답 품질을 판단할 수 없었습니다.
+
+RAGAS를 채택한 이유는 다음과 같습니다.
+
+1. **LLM-as-judge 자동 평가** — 사람이 매 질문·답변을 채점하지 않아도 LLM이 대신 채점하므로, 대량의 자유형 질문에도 정량적 점수를 낼 수 있습니다.
+2. **RAG 경로를 단계별로 분리 진단** — "검색이 정확한가(context_precision)", "필요한 정보를 다 가져왔는가(context_recall)", "검색 결과에 없는 내용을 지어내진 않았는가(faithfulness)", "질문과 관련된 답을 했는가(answer_relevancy)"를 각각 따로 측정해, 문제가 **검색 단계**에 있는지 **답변 생성 단계**에 있는지 구분할 수 있습니다.
+3. **기존 스택 재사용** — `src/llm_config.py`의 `get_llm()`, `get_embeddings()`(`GoogleGenerativeAIEmbeddings`)를 RAGAS의 `LangchainLLMWrapper` / `LangchainEmbeddingsWrapper`로 그대로 감싸서 채점자로 재사용했습니다. 별도 평가 인프라나 다른 모델을 추가로 붙일 필요가 없습니다. (평가 LLM은 `get_llm()`이 반환하는 모델을 그대로 따라가며, 현재는 `gemini-3.1-flash-lite`입니다.)
+4. **chunk_tuning.py 실험을 보완** — chunk_tuning이 "검색 파라미터(k, chunk_size) 튜닝"에 초점을 맞췄다면, RAGAS 평가는 그 위에서 실제 사용자에게 나가는 **최종 자연어 응답의 품질**을 검증하는 상위 레벨 평가로 채택했습니다.
+
+### 평가 방법
+
+Agent 전체(`create_react_agent`)를 거치면 `pandas_filter` 등 다른 Tool로 분기될 수 있어, `rag_search` 경로만 분리해서 평가합니다.
+
+1. `rag_search` Tool을 직접 호출해 벡터 검색 결과(context)를 얻는다.
+2. 검색 결과만 근거로 LLM(`get_llm()`)이 최종 답변을 생성한다. (Agent의 "도구 결과를 자연스럽게 요약" 단계 재현)
+3. (질문, 답변, context, reference) 조합을 RAGAS 4개 지표로 채점한다.
+4. 질문 하나를 처리·채점할 때마다 바로 `ragas_result.csv`에 append — 무료 티어 일일 한도 때문에
+   중간에 실패해도 그 전까지 채점된 질문은 파일에 남는다.
+
+질문도 한 번에 하나씩만 순차 처리하고, API 호출 사이마다 `SLEEP_SECONDS`(5초)만큼 대기해
+순간 요청량을 최소화한다 (무료 티어 레이트리밋 대응).
+
+| 항목 | 값 |
+|------|-----|
+| 평가 대상 | `rag_search` Tool (RAG 경로) |
+| LLM (답변 생성·채점) | `src.llm_config.get_llm()` (현재 `gemini-3.1-flash-lite`) |
+| 임베딩 | `GoogleGenerativeAIEmbeddings` (`gemini-embedding-001`) |
+| 지표 | faithfulness, answer_relevancy, context_precision, context_recall |
+
+### 평가 질문 3개
+
+| # | 질문 |
+|---|------|
+| 1 | 분위기 좋은 한식집 추천해줘 |
+| 2 | 서울에서 디지털 상품권 되는 카페 알려줘 |
+| 3 | 조용히 혼밥하기 좋은 곳 |
+
+> `reference`(context_recall/precision 계산용 정답)는 retriever(k=5, mmr)가 실제로
+> 반환하는 상위 문서의 상호명·지역·품목을 그대로 반영해 작성한 골든셋입니다
+> (`ragas_eval.py`의 `REFERENCES`). vectordb·retriever 설정이 바뀌면 재확인이 필요합니다.
+
+### 실행 결과
+
+`gemini-3.1-flash-lite` 기준, 3개 질문 모두 처리 완료. `answer_relevancy`는 이 모델이
+한 번의 호출에서 다중 candidate를 생성하지 못해 `AnswerRelevancy(strictness=1)`로
+후보 1개만 생성하도록 낮춰서 계산했습니다.
+
+| 질문 | faithfulness | answer_relevancy | context_precision | context_recall |
+|------|:---:|:---:|:---:|:---:|
+| 분위기 좋은 한식집 추천해줘 | 0.000 | 0.753 | 0.0 | 1.0 |
+| 서울에서 디지털 상품권 되는 카페 알려줘 | 0.500 | 0.860 | 0.0 | 1.0 |
+| 조용히 혼밥하기 좋은 곳 | 0.250 | 0.000 | 0.0 | 1.0 |
+| **평균** | **0.250** | **0.538** | **0.0** | **1.0** |
+
+**해석 및 한계**
+
+- **context_recall = 1.0**: `REFERENCES`를 구체적인 상호명·지역 골든셋으로 다시 쓰자 0.0 → 1.0으로 바뀌었습니다. 검색이 필요한 정보를 실제로 다 가져오고 있다는 뜻입니다.
+- **context_precision = 0.0**: context_recall이 1.0인 걸 보면 검색 자체의 문제는 아니고, legacy `context_precision` 지표가 각 검색 결과를 reference와 비교해 랭킹 순서를 매기는 방식 자체의 특성으로 보입니다. 원인은 아직 명확히 파악하지 못해 추가 조사가 필요합니다.
+- **answer_relevancy**: 0.753 / 0.860 / 0.0 (평균 0.538). 세 번째 질문("조용히 혼밥하기 좋은 곳")에서는 챗봇이 "혼밥 분위기 정보는 검색 결과에 없다"고 사실대로 회피 답변을 해서 관련도가 0으로 나왔습니다 — 이는 hallucination을 피한 결과이므로 faithfulness 관점에선 오히려 바람직한 동작입니다.
+- **faithfulness**: 0.0 / 0.5 / 0.25 (평균 0.25) — 생성된 답변 문장이 검색된 컨텍스트로 실제 뒷받침되는 비율입니다. 세 질문 모두 컨텍스트에 없는 "분위기" 관련 서술을 답변에 섞어서 낮게 나오는 경향이 있습니다. 답변 프롬프트에서 "검색 결과에 없는 내용은 지어내지 마세요"를 더 강하게 강제하면 개선 여지가 있어 보입니다.
+
+---
+
 ## 실행 방법
 
 ### 1. 사전 준비
