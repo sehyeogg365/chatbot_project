@@ -8,7 +8,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmb
 
 def get_llm(temperature: float = 0.7) -> ChatGoogleGenerativeAI:# -> ChatGoogleGenerativeAI:
     return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+        model="gemini-3.1-flash-lite",
         temperature=temperature,
     )
 
