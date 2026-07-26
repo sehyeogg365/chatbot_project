@@ -258,6 +258,15 @@ Agent 전체(`create_react_agent`)를 거치면 `pandas_filter` 등 다른 Tool�
 | 임베딩 | `GoogleGenerativeAIEmbeddings` (`gemini-embedding-001`) |
 | 지표 | faithfulness, answer_relevancy, context_precision, context_recall |
 
+### 평가 지표 설명
+
+| 지표 | 한 줄 요약 | 상세 설명 |
+|------|-----------|----------|
+| **context_precision** | 검색이 정확한가 | 검색된 문서들이 실제로 정답과 관련 있는 문서인지를 측정합니다. 관련 없는 문서가 섞여 있을수록 낮아집니다. |
+| **context_recall** | 필요한 정보를 다 가져왔는가 | 정답에 필요한 정보가 검색 결과에 포함되어 있는지를 측정합니다. 필요한 근거를 빠뜨릴수록 낮아집니다. |
+| **faithfulness** | 검색 결과에 없는 내용을 지어내진 않았는가 | 생성된 답변의 각 문장이 검색된 컨텍스트로 실제 뒷받침되는 비율입니다. 컨텍스트에 없는 내용을 답변에 포함할수록 낮아집니다. |
+| **answer_relevancy** | 질문과 관련된 답을 했는가 | 생성된 답변이 원래 질문에 얼마나 관련 있는지를 측정합니다. 질문과 동떨어진 내용을 답할수록 낮아집니다. |
+
 ### 평가 질문 3개
 
 | # | 질문 |
