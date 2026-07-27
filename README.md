@@ -32,7 +32,6 @@ LangGraph ReAct Agent + Gemini 2.5 Flash LLM을 활용하며, React SPA 프론�
 - **FastAPI** — REST API 서버
 - **Uvicorn** — ASGI 서버
 - **Pydantic** — 요청/응답 데이터 검증
-- **mcp** - MCP Server Tool 인터페이스
 - **pandas** - 정형 데이터 검색/필터링
 
 ### AI / LLM
@@ -64,8 +63,7 @@ chatbot_project/
 │   ├── main.py                 # 앱 초기화, CORS, 라우터 등록
 │   └── routers/
 │       ├── chat.py             # POST /api/chat  — 챗봇 응답
-│       ├── report.py           # GET  /api/report — PDF 보고서 생성
-│       └── search.py           # GET  /api/search/* — MCP 기반 가맹점 검색
+│       └── report.py           # GET  /api/report — PDF 보고서 생성
 │
 ├── frontend/                   # React SPA (Vite)
 │   ├── src/
@@ -96,7 +94,6 @@ chatbot_project/
 │   ├── 01_data_exploration.ipynb   # 기본 통계량 확인 및 EDA
 │   └── 02_preprocessing.ipynb      # 전처리 및 cleaned_onnuri.csv 생성
 │
-├── mcp_server/                 # MCP 서버 클라이언트
 ├── vectordb/chroma_db/         # ChromaDB 벡터 데이터베이스 (git 제외)
 ├── docs/                       # 아키텍처 다이어그램, 실행 화면 이미지
 │
@@ -134,11 +131,8 @@ chatbot_project/
       │                              └── cleaned_onnuri.csv 집계 (Pandas)
       │                   Gemini 2.5 Flash (LLM 최종 응답)
       │
-      ├── GET  /api/report  →  backend/routers/report.py
-      │                         └── Pandas 필터 + Matplotlib 차트 + fpdf2 PDF
-      │
-      └── GET  /api/search/* →  backend/routers/search.py
-                                  └── MCP 클라이언트 기반 검색
+      └── GET  /api/report  →  backend/routers/report.py
+                                └── Pandas 필터 + Matplotlib 차트 + fpdf2 PDF
 ```
 
 ### 챗봇 요청 처리 흐름
@@ -366,11 +360,6 @@ npm run dev
 |--------|------|------|
 | `POST` | `/api/chat` | 챗봇 질문 처리 |
 | `GET` | `/api/report` | PDF 보고서 생성 및 다운로드 |
-| `GET` | `/api/search/area` | 지역 기반 가맹점 검색 |
-| `GET` | `/api/search/name` | 시장명 기반 검색 |
-| `GET` | `/api/search/combined` | 지역+시장명 복합 검색 |
-| `GET` | `/api/search/stores` | 지역·업종·디지털 복합 검색 |
-| `GET` | `/api/search/statistics` | 지역 통계 조회 |
 | `GET` | `/health` | 서버 상태 확인 |
 
 ### POST /api/chat 요청 예시
