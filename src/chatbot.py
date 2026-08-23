@@ -25,6 +25,7 @@ from langchain_core.tools import tool
 from langsmith import traceable
 
 from src.llm_config import get_llm, get_embeddings
+from src.category_taxonomy import CATEGORY_EXPANSIONS, ALL_CATEGORY_TERMS
 
 # ──────────────────────────────────────────────────────────────────
 # 초기화
@@ -57,15 +58,6 @@ AREAS = [
     "강원", "경기", "경남", "경북", "광주", "대구", "대전", "부산",
     "서울", "세종", "울산", "인천", "전남", "전북", "제주", "충남", "충북",
 ]
-
-CATEGORY_EXPANSIONS: dict[str, list[str]] = {
-    "카페":   ["카페", "커피", "디저트", "베이커리"],
-    "음식점": ["음식점", "식당", "한식", "중식", "일식"],
-    "자전거": ["자전거", "바이크"],
-    "미용":   ["미용", "헤어", "네일", "뷰티"],
-    "의류":   ["의류", "옷", "패션"],
-    "고기":   ["고기", "구이", "삼겹살", "갈비"],
-}
 
 FAQ_DB: dict[str, str] = {
     "사용처":    "온누리상품권은 전통시장 및 상점가 가맹점에서만 사용할 수 있습니다. 대형마트·백화점·편의점은 사용 불가합니다.",
@@ -111,7 +103,7 @@ def pandas_filter(
         keywords = CATEGORY_EXPANSIONS.get(category, [category])
         mask = pd.Series([False] * len(result_df), index=result_df.index)
         for kw in keywords:
-            mask |= result_df["취급품목"].str.contains(kw, na=False, case=False)
+            mask |= result_df["취급품목"].str.contains(kw, na=False, case=False, regex=False)
         result_df = result_df[mask]
 
     if digital_only:
@@ -226,7 +218,7 @@ def market_analysis(location: str, category: str) -> str:
     keywords = CATEGORY_EXPANSIONS.get(category, [category])
     mask = pd.Series([False] * len(df), index=df.index)
     for kw in keywords:
-        mask |= df["취급품목"].str.contains(kw, na=False, case=False)
+        mask |= df["취급품목"].str.contains(kw, na=False, case=False, regex=False)
     category_df = df[mask]
 
     if len(category_df) == 0:
@@ -345,6 +337,5 @@ def process_query(query: str, history: list) -> str:
 # ──────────────────────────────────────────────────────────────────
 def extract_area_category(query: str) -> tuple[Optional[str], Optional[str]]:
     area = next((a for a in AREAS if a in query), None)
-    all_cats = list(CATEGORY_EXPANSIONS.keys()) + ["안경", "커피", "기념품", "뷔페"]
-    category = next((c for c in all_cats if c in query), None)
+    category = next((c for c in ALL_CATEGORY_TERMS if c in query), None)
     return area, category

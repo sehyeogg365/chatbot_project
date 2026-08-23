@@ -1,6 +1,8 @@
 import pandas as pd
 from typing import Optional
 
+from category_taxonomy import expand_category
+
 '''
 목적: 검색 함수 개발
 내용:
@@ -55,9 +57,11 @@ def statistics(df: pd.DataFrame, area: str, category: Optional[str] = None) -> d
     # category가 None이 아닐 때만 적용
     # --------------------------------------------------
     if category:
-        filtered_df = filtered_df[
-            filtered_df["취급품목"].str.contains(category, na=False)
-        ]
+        keywords = expand_category(category)
+        mask = pd.Series([False] * len(filtered_df), index=filtered_df.index)
+        for kw in keywords:
+            mask |= filtered_df["취급품목"].str.contains(kw, na=False, regex=False)
+        filtered_df = filtered_df[mask]
 
     # --------------------------------------------------
     # 3. 전체 가맹점 수

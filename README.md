@@ -295,6 +295,55 @@ Agent 전체(`create_react_agent`)를 거치면 `pandas_filter` 등 다른 Tool�
 
 ---
 
+## 온톨로지 기반 카테고리 계층 구조 설계
+
+> 매핑 정의: `src/category_taxonomy.py` | 시각화 스크립트: `experiments/visualize_ontology.py`
+
+### 배경
+
+`취급품목` 컬럼은 22,113개의 자유 입력 텍스트로, "한식" / "음식(한식)" / "중식" / "분식"처럼 표기가 제각각입니다. 기존에는 `str.contains(category)` 단순 문자열 포함 검색만 사용해서, "음식점"으로 검색하면 정확히 "음식점"이라는 문자열이 들어간 값만 잡히고 "한식"·"중식"·"분식" 등 실제로는 음식점에 속하는 값은 빠지는 문제가 있었습니다. 또한 `chatbot.py`에 6개 항목짜리 매핑이 있었지만 `search_engine.py`와 공유되지 않아 도구마다 검색 결과가 달랐습니다.
+
+그래프 DB(Neo4j/RDF)를 새로 두기보다, 기존 pandas/ChromaDB 구조를 그대로 두고 바로 적용 가능한 **경량 카테고리 태그 매핑**을 선택했습니다.
+
+### 설계
+
+- 실제 데이터의 상위 빈도 취급품목(`value_counts` 상위권)을 기준으로 **대분류 21개 → 하위 원본 키워드 리스트** 형태의 매핑을 사람이 직접 구성 (`CATEGORY_EXPANSIONS: dict[str, list[str]]`).
+- `expand_category(term)` 함수가 사용자가 입력한 category를 관련 키워드 전체로 확장해서 검색.
+- 매핑에 없는 term은 원본 그대로 반환(fallback)해 기존 동작과 호환.
+
+### 적용 위치
+
+- `chatbot.py`의 `pandas_filter`, `market_analysis` Tool, `extract_area_category()` 헬퍼
+- `search_engine.py`의 `statistics()` 함수
+- `str.contains(..., regex=False)` 명시 — 키워드에 괄호가 포함된 값(`음식(한식)`, `도소매(의류)`)이 정규식 그룹으로 잘못 해석되어 매칭이 깨지는 문제를 함께 수정.
+
+### 효과 (필터링 매칭 건수 변화)
+
+| category | 적용 전 (단순 substring) | 적용 후 (계층 확장) |
+|---|---:|---:|
+| 음식점 | 3,132 | 23,226 |
+| 한식 | 13,427 | 15,287 |
+| 카페 | 858 | 5,055 |
+| 고기 | 839 | 8,682 |
+| 미용 | 4,390 | 5,204 |
+| 자전거 | 98 | 100 |
+
+`chunk_tuning.py` 실험의 "chunk_size는 효과가 없고 k가 실질적 개선 요인이었다"는 결론과 별개로, 검색 **재현율(recall)** 을 끌어올리는 지점은 벡터 파라미터가 아니라 이 카테고리 매핑 쪽이었습니다 — "음식점" 검색이 3,132건에서 23,226건으로 늘어난 게 그 예시입니다.
+
+### 시각화
+
+<p align="center">
+  <img src="./experiments/ontology_graph_overview.png" width="600" alt="카테고리 태그 매핑 개요 그래프">
+</p>
+<p align="center"><sub>대분류 개요 그래프 — 노드 크기는 하위 키워드 수, 선은 키워드를 공유하는 대분류 간 연결(예: 음식점 ↔ 한식/중식/일식/분식)</sub></p>
+
+<p align="center">
+  <img src="./experiments/ontology_graph.png" width="700" alt="카테고리 태그 매핑 전체 그래프">
+</p>
+<p align="center"><sub>전체 그래프 — 대분류(큰 노드) → 취급품목 키워드(작은 노드) 스포크 레이아웃</sub></p>
+
+---
+
 ## 실행 방법
 
 ### 1. 사전 준비
