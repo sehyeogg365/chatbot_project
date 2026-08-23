@@ -60,7 +60,7 @@ export default function Architecture() {
               <span className={styles.stepNum}>2</span>
               <div className={styles.stepBody}>
                 <p className={styles.stepLabel}>LangGraph Agent 판단</p>
-                <p className={styles.stepNote}>질문 유형 분석 → 적합한 Tool 선택 (pandas_filter / rag_search / faq_answer)</p>
+                <p className={styles.stepNote}>질문 유형 분석 → 적합한 Tool 선택 (pandas_filter / rag_search / faq_answer / market_analysis)</p>
               </div>
             </li>
             <li className={styles.step}>
@@ -68,7 +68,7 @@ export default function Architecture() {
               <div className={styles.stepBody}>
                 <p className={styles.stepLabel}>Tool 실행</p>
                 <p className={styles.stepNote}>
-                  정형 필터링(Pandas) / 벡터 유사도 검색(ChromaDB) / FAQ 매칭 중 선택 실행
+                  정형 필터링(Pandas) / 벡터 유사도 검색(ChromaDB) / FAQ 매칭 / 입지 경쟁도 분석 중 선택 실행
                 </p>
               </div>
             </li>
@@ -121,6 +121,10 @@ export default function Architecture() {
             <div className={styles.card}>
               <p className={styles.cardTitle}>Tool 3 — faq_answer</p>
               <p className={styles.stepNote}>온누리상품권 정책·사용법·규정 FAQ 답변. 유효기간·할인·환불 등 정책 질문에 사용.</p>
+            </div>
+            <div className={styles.card}>
+              <p className={styles.cardTitle}>Tool 4 — market_analysis</p>
+              <p className={styles.stepNote}>지역·업종 입지 경쟁도 분석. 가맹점 수·전국 평균 대비 포화도·디지털 상품권 비율을 계산해 "이 지역에 카페 차리면 어때?" 같은 창업 입지 질문에 사용.</p>
             </div>
           </div>
         </div>
