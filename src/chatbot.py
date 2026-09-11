@@ -23,6 +23,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.tools import tool
 from langsmith import traceable
+from sentence_transformers import CrossEncoder
 
 from src.llm_config import get_llm, get_embeddings
 from src.category_taxonomy import CATEGORY_EXPANSIONS, ALL_CATEGORY_TERMS
@@ -42,12 +43,9 @@ vectorstore = Chroma(
     persist_directory="vectordb/chroma_db",# 이렇게 쓰면 기존 DB 불러오기
     embedding_function=embeddings,
 )
-retriever = vectorstore.as_retriever(
-    search_type="mmr",
-    search_kwargs={"k": 5, "lambda_mult": 0.7},
-)
-
 llm = get_llm(temperature=0.3)
+
+reranker = CrossEncoder("cross-encoder/ms-marco-MiniLM-L-6-v2")
 
 print(f"✅ 초기화 완료 (벡터DB: {vectorstore._collection.count()}개)")
 
@@ -141,6 +139,28 @@ def pandas_filter(
 # ──────────────────────────────────────────────────────────────────
 # Tool 2: RAG 유사도 검색
 # ──────────────────────────────────────────────────────────────────
+QUERY_REWRITE_PROMPT = """당신은 온누리상품권 가맹점 벡터 검색을 위한 쿼리 재작성 전문가입니다.
+사용자의 자연어 질문을 벡터 검색에 적합하도록 더 구체적인 검색 쿼리로 변환하세요.
+
+규칙:
+- 지역명, 업종/품목 관련 키워드를 구체적으로 확장하세요 (예: 고기집 → 고기 구이 삼겹살 갈비).
+- "온누리상품권 가맹점" 같은 맥락 키워드를 포함하세요.
+- 결과는 변환된 검색 쿼리 한 줄만 출력하고, 설명·따옴표는 붙이지 마세요.
+
+사용자 질문: {query}
+검색 쿼리:"""
+
+
+def rewrite_query(query: str) -> str:
+    try:
+        response = llm.invoke(QUERY_REWRITE_PROMPT.format(query=query))
+        rewritten = response.content.strip()
+        return rewritten if rewritten else query
+    except Exception as e:
+        print(f"⚠️ Query Rewrite 실패, 원본 쿼리 사용: {e}")
+        return query
+
+
 @tool
 def rag_search(query: str) -> str:
     """
@@ -149,12 +169,19 @@ def rag_search(query: str) -> str:
     매장 이름 일부만 아는 경우에 사용하세요.
     정확한 조건(지역·디지털)이 있으면 pandas_filter를 먼저 사용하세요.
     """
-    docs = retriever.invoke(query)
+    rewritten_query = rewrite_query(query)
+    print(f"🔍 Query Rewrite: '{query}' → '{rewritten_query}'")
+
+    docs = vectorstore.similarity_search(rewritten_query, k=10)
     if not docs:
         return "유사한 가맹점 정보를 찾을 수 없습니다."
 
-    lines = [f"유사도 검색 결과 ({len(docs)}개):"]
-    for i, doc in enumerate(docs, 1):
+    pairs = [(rewritten_query, doc.page_content) for doc in docs]
+    scores = reranker.predict(pairs)
+    reranked = sorted(zip(docs, scores), key=lambda x: x[1], reverse=True)[:3]
+
+    lines = [f"유사도 검색 결과 ({len(reranked)}개):"]
+    for i, (doc, _) in enumerate(reranked, 1):
         lines.append(f"[{i}] {doc.page_content}")
     return "\n".join(lines)
 
