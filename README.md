@@ -39,6 +39,7 @@ LangGraph ReAct Agent + Gemini 2.5 Flash LLM을 활용하며, React SPA 프론�
 - **LangChain** — LLM 추상화, 벡터스토어 연동
 - **Google Gemini 2.5 Flash Lite** — LLM (langchain-google-genai)
 - **OpenAI text-embedding-3-small** — 가맹점 텍스트 임베딩
+- **sentence-transformers (CrossEncoder)** — 검색 결과 재순위화 (`cross-encoder/ms-marco-MiniLM-L-6-v2`)
 
 ### 데이터 / 저장
 - **Pandas** — 정형 데이터 필터링 및 통계
@@ -124,7 +125,9 @@ chatbot_project/
       │                        ├── Tool 1: pandas_filter
       │                        │     └── cleaned_onnuri.csv (Pandas)
       │                        ├── Tool 2: rag_search
-      │                        │     └── vectordb/chroma_db (ChromaDB)
+      │                        │     ├── Query Rewrite (LLM이 질문 재작성)
+      │                        │     ├── vectordb/chroma_db (ChromaDB, k=10 유사도 검색)
+      │                        │     └── CrossEncoder Reranker → 상위 3개 반환
       │                        ├── Tool 3: faq_answer
       │                        │     └── 인라인 FAQ DB
       │                        └── Tool 4: market_analysis
@@ -148,7 +151,7 @@ chatbot_project/
 | Tool | 역할 | 사용 시점 |
 |------|------|-----------|
 | `pandas_filter` | 지역·품목·디지털/지류 조건 정형 필터링, 통계 집계 | 구체적인 조건 검색, 개수 질문 |
-| `rag_search` | ChromaDB 벡터 유사도 검색 (MMR) | "분위기 좋은 카페" 등 자연어 묘사 |
+| `rag_search` | Query Rewrite로 질문 재작성 → ChromaDB 벡터 유사도 검색(k=10) → CrossEncoder 재순위화 → 상위 3개 반환 | "분위기 좋은 카페" 등 자연어 묘사 |
 | `faq_answer` | 상품권 정책·사용법·규정 FAQ | 유효기간, 환불, 할인율, 구입처 등 |
 | `market_analysis` | 지역·업종 입지 경쟁도 분석 (가맹점 수, 전국 평균 대비 포화도, 디지털 비율) | "이 지역에 카페 차리면 어때?", "경쟁이 심한가요?" 등 창업 입지 질문 |
 
@@ -344,6 +347,50 @@ Agent 전체(`create_react_agent`)를 거치면 `pandas_filter` 등 다른 Tool�
 
 ---
 
+## RAG 고도화: Query Rewrite + CrossEncoder Reranker
+
+> 적용 위치: `src/chatbot.py`의 `rag_search` Tool
+
+### 배경
+
+사용자의 질문은 "강남에 고기집 추천해줘"처럼 짧고 구어체인 경우가 많은데, 이런 표현은 임베딩 공간에서 가맹점 데이터(상호명·주소·취급품목 위주 텍스트)와 정확히 매칭되지 않을 수 있습니다. 또한 벡터 유사도만으로 뽑은 상위 문서 순서가 실제 관련성 순서와 항상 일치하지는 않는다는 한계가 있습니다. 이 두 문제를 각각 **검색 전 쿼리 보강(Query Rewrite)** 과 **검색 후 재정렬(Reranking)** 로 완화했습니다.
+
+### Query Rewrite
+
+`rag_search` 호출 직후, LLM(`rewrite_query()` / `QUERY_REWRITE_PROMPT`)이 사용자의 자연어 질문을 벡터 검색에 유리한 구체적 쿼리로 재작성합니다.
+
+```
+"강남에 고기집 추천해줘"
+        ↓ Query Rewrite (LLM)
+"서울 강남 지역 고기 구이 삼겹살 갈비 온누리상품권 가맹점 추천"
+```
+
+- 지역명·업종 키워드를 구체적으로 확장하고, "온누리상품권 가맹점" 같은 맥락 키워드를 덧붙이도록 프롬프트로 유도합니다.
+- 재작성이 실패하면(LLM 오류 등) 원본 쿼리로 폴백해 검색이 끊기지 않도록 했습니다.
+- 실행 시 콘솔에 `🔍 Query Rewrite: '원본' → '재작성'` 로그를 남겨 동작을 바로 확인할 수 있습니다.
+
+### CrossEncoder Reranker
+
+벡터 유사도만으로는 상위 k개의 순서가 실제 관련도와 어긋날 수 있어, 후보를 넉넉히 확보한 뒤 별도 모델로 다시 순위를 매깁니다.
+
+1. `vectorstore.similarity_search`로 재작성된 쿼리에 대해 후보 **k=10**개를 가져옵니다.
+2. `cross-encoder/ms-marco-MiniLM-L-6-v2` (`sentence-transformers.CrossEncoder`)가 `(쿼리, 가맹점 문서)` 쌍마다 관련성 점수를 매깁니다.
+3. 점수 내림차순으로 정렬해 **상위 3개**만 최종 반환합니다.
+
+### 전체 흐름
+
+```
+사용자 질문 → Query Rewrite (LLM) → ChromaDB 유사도 검색 (k=10)
+           → CrossEncoder 재순위화 → 상위 3개 → Agent 최종 응답 생성
+```
+
+### 한계 및 향후 계획
+
+- 이번 적용은 `chunk_tuning.py`/`ragas_eval.py`처럼 별도의 정량 평가(A/B 비교)를 아직 수행하지 않았습니다. 추후 동일한 RAGAS 파이프라인으로 재순위화 적용 전/후의 `faithfulness`·`answer_relevancy`·`context_precision`을 비교할 계획입니다.
+- `cross-encoder/ms-marco-MiniLM-L-6-v2` 모델은 최초 실행 시 HuggingFace Hub에서 자동 다운로드되며, 이후에는 로컬 캐시(`~/.cache/huggingface`)를 재사용합니다.
+
+---
+
 ## 실행 방법
 
 ### 1. 사전 준비
@@ -454,6 +501,7 @@ npm run dev
 - **벡터DB** (`vectordb/chroma_db/`): 용량 약 500MB~1GB, git 추적 제외
 - **API 키**: `.env` 파일은 git에 포함하지 않음. OpenAI·Google API 키 모두 필요
 - **한국어 PDF**: Windows 맑은 고딕 폰트 (`C:\Windows\Fonts\malgun.ttf`) 사용 — Windows 환경 전용
+- **CrossEncoder 모델**: 최초 실행 시 HuggingFace Hub에서 `cross-encoder/ms-marco-MiniLM-L-6-v2` 자동 다운로드 (인터넷 연결 필요, 이후 로컬 캐시 재사용)
 
 ---
 
