@@ -151,10 +151,19 @@ QUERY_REWRITE_PROMPT = """당신은 온누리상품권 가맹점 벡터 검색�
 검색 쿼리:"""
 
 
+def extract_text(content) -> str:
+    """Gemini가 content를 list[dict] 형태로 반환하는 경우 처리"""
+    if isinstance(content, list):
+        return "".join(
+            block.get("text", "") for block in content if isinstance(block, dict)
+        )
+    return content
+
+
 def rewrite_query(query: str) -> str:
     try:
         response = llm.invoke(QUERY_REWRITE_PROMPT.format(query=query))
-        rewritten = response.content.strip()
+        rewritten = extract_text(response.content).strip()
         return rewritten if rewritten else query
     except Exception as e:
         print(f"⚠️ Query Rewrite 실패, 원본 쿼리 사용: {e}")
@@ -347,13 +356,8 @@ def process_query(query: str, history: list) -> str:
             {"messages": messages},
             config={"run_name": "onnuri_agent", "tags": ["chatbot"]},# LangSmith에서 실행 이름과 태그 지정 언제 호출, 어떤 도구 사용했는지, 응답 시간, 토큰 몇 개 썼는지 추적 가능
         )
-        content = result["messages"][-1].content
         # Gemini가 content를 list[dict] 형태로 반환하는 경우 처리
-        if isinstance(content, list):
-            return "".join(
-                block.get("text", "") for block in content if isinstance(block, dict)
-            )
-        return content
+        return extract_text(result["messages"][-1].content)
     except Exception as e:
         print(f"❌ Agent 오류: {e}")
         return "죄송합니다. 일시적인 오류가 발생했습니다. 다시 시도해 주세요."
