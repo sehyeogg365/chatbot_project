@@ -400,9 +400,56 @@ Agent 전체(`create_react_agent`)를 거치면 `pandas_filter` 등 다른 Tool�
            → CrossEncoder 재순위화 → 상위 3개 → Agent 최종 응답 생성
 ```
 
+### 전/후 RAGAS 비교 평가
+
+> 평가 스크립트: `experiments/ragas_comparison.py` | 결과 데이터: `experiments/ragas_comparison.csv`
+
+`ragas_eval.py`와 동일한 질문 3개를 두 가지 검색 경로로 각각 실행해 비교했습니다.
+
+- **Mode A (before)**: Query Rewrite/Reranker 적용 전의 기존 구현 재현 — `vectorstore.as_retriever(search_type="mmr", search_kwargs={"k": 5, "lambda_mult": 0.7})`로 top-5를 그대로 반환 (커밋 `b659338` 시점 `rag_search`).
+- **Mode B (after)**: 현재 `rag_search` — `rewrite_query()` → `similarity_search(k=10)` → CrossEncoder 재순위화 → 상위 3개.
+
+두 모드 모두 동일한 `ANSWER_PROMPT`로 답변을 생성해 검색 파이프라인 차이만 분리 측정했습니다. `reference`(골든셋)는 특정 모드의 검색 결과(상호명)에 치우치지 않도록, 질문이 요구하는 조건(지역·업종·상품권 형태)을 서술하는 방식으로 다시 작성했습니다(`ragas_eval.py`의 상호명 나열 방식과 차이점).
+
+> 평가 도중 `rewrite_query()`가 Gemini의 `content`(list[dict] 형태)를 `.strip()`하려다 매번 `AttributeError`로 실패해 원본 쿼리로 조용히 폴백하던 버그를 이번에 발견해 함께 수정했습니다(`src/chatbot.py`) — 수정 전에는 Mode B가 사실상 "리랭커만 적용"된 상태로 측정될 뻔했습니다.
+
+**질문별 상세**
+
+| 질문 | 지표 | Mode A (before) | Mode B (after) |
+|---|---|:---:|:---:|
+| 분위기 좋은 한식집 추천해줘 | faithfulness | 0.600 | 0.000 |
+| | answer_relevancy | 0.753 | 0.750 |
+| | context_precision | 0.0 | 0.0 |
+| | context_recall | 0.0 | 0.0 |
+| 서울에서 디지털 상품권 되는 카페 알려줘 | faithfulness | 0.000 | 1.000 |
+| | answer_relevancy | 0.856 | 0.893 |
+| | context_precision | 0.0 | 0.0 |
+| | context_recall | 0.5 | 0.5 |
+| 조용히 혼밥하기 좋은 곳 | faithfulness | 0.000 | 0.000 |
+| | answer_relevancy | 0.749 | 0.787 |
+| | context_precision | 0.0 | 0.0 |
+| | context_recall | 0.5 | 0.0 |
+
+**전체 평균**
+
+| 지표 | Mode A (before) | Mode B (after) | Δ (B−A) |
+|---|:---:|:---:|:---:|
+| faithfulness | 0.2000 | 0.3333 | ▲ +0.1333 |
+| answer_relevancy | 0.7859 | 0.8099 | ▲ +0.0241 |
+| context_precision | 0.0000 | 0.0000 | － +0.0000 |
+| context_recall | 0.3333 | 0.1667 | ▼ −0.1667 |
+| **평균** | **0.3298** | **0.3275** | ▼ −0.0023 |
+
+**해석 및 한계**
+
+- **answer_relevancy·faithfulness는 개선**: 세 질문 모두 answer_relevancy가 소폭 상승했고, 특히 "서울에서 디지털 상품권 되는 카페 알려줘"는 faithfulness가 0.0 → 1.0으로 크게 개선됐습니다. Query Rewrite로 어휘가 보강되고 Reranker가 관련성 낮은 문서(예: "스터디카페 공유")를 걸러내면서, 생성된 답변이 검색 컨텍스트에 더 충실해진 것으로 보입니다.
+- **context_recall은 오히려 하락**: "조용히 혼밥하기 좋은 곳"에서 0.5 → 0.0으로 떨어져 전체 평균을 끌어내렸습니다. Reranker가 top-10 후보를 top-3로 좁히는 과정에서, 골든셋이 요구하는 업종 폭(한식·분식·일식 등)에 맞는 문서가 컷오프됐을 가능성이 있습니다 — **재현율과 정밀도의 트레이드오프**가 실측으로 드러난 사례입니다.
+- **context_precision은 두 모드 모두 0.0**: `ragas_eval.py`의 기존 평가에서도 원인 불명으로 남겨둔 것과 동일한 현상이 이번 비교에서도 재현됐습니다. Reranker 적용 여부와 무관하게 0으로 나오는 것으로 보아, 이 지표 자체(또는 채점 LLM과의 조합)의 특성일 가능성이 높습니다 — 추가 조사가 필요합니다.
+- **전체 평균은 사실상 동률(−0.0023)**: 질문 3개라는 작은 샘플 크기에서는 한 지표(context_recall)의 하락이 다른 두 지표의 개선을 상쇄할 만큼 노이즈가 큽니다. 참고용 신호로 보고, 질문 수를 늘려 재평가하는 것이 다음 단계로 적절합니다.
+
 ### 한계 및 향후 계획
 
-- 이번 적용은 `chunk_tuning.py`/`ragas_eval.py`처럼 별도의 정량 평가(A/B 비교)를 아직 수행하지 않았습니다. 추후 동일한 RAGAS 파이프라인으로 재순위화 적용 전/후의 `faithfulness`·`answer_relevancy`·`context_precision`을 비교할 계획입니다.
+- 위 비교 평가는 질문 3개로 진행한 소규모 실험입니다. 질문 셋을 늘려 신뢰도를 높이는 것이 다음 과제입니다.
 - `cross-encoder/ms-marco-MiniLM-L-6-v2` 모델은 최초 실행 시 HuggingFace Hub에서 자동 다운로드되며, 이후에는 로컬 캐시(`~/.cache/huggingface`)를 재사용합니다.
 
 ---
