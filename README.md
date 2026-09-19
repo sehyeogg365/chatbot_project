@@ -4,7 +4,7 @@
 
 전국 온누리상품권 가맹점 데이터를 기반으로 자연어 질문에 답변하는 AI 챗봇 웹 애플리케이션입니다.  
 LangGraph ReAct Agent + Gemini 2.5 Flash LLM을 활용하며, React SPA 프론트엔드와 FastAPI 백엔드로 구성됩니다.
-
+배포 url: https://chatbotproject-production-d8e0.up.railway.app/docs
 ---
 
 ## 주요 기능
