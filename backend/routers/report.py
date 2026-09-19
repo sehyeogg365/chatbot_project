@@ -22,8 +22,8 @@ router = APIRouter()
 # ── 상수 ──────────────────────────────────────────────────────────
 _ROOT = Path(__file__).resolve().parent.parent.parent
 _CSV  = _ROOT / "cleaned_onnuri.csv"
-_FONT_REGULAR = r"C:\Windows\Fonts\malgun.ttf"
-_FONT_BOLD    = r"C:\Windows\Fonts\malgunbd.ttf"
+_FONT_REGULAR = str(_ROOT / "fonts" / "NanumGothic-Regular.ttf")
+_FONT_BOLD    = str(_ROOT / "fonts" / "NanumGothic-Bold.ttf")
 
 CATEGORY_EXPANSIONS: dict[str, list[str]] = {
     "카페":   ["카페", "커피", "디저트", "베이커리"],
