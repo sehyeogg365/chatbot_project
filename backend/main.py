@@ -1,8 +1,12 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from backend.routers import chat
 from backend.routers import report
+
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 app = FastAPI(title="온누리 챗봇 API")
 
@@ -16,7 +20,7 @@ app.add_middleware(
 
 app.include_router(chat.router,   prefix="/api")
 app.include_router(report.router, prefix="/api")
-app.mount("/docs", StaticFiles(directory="docs"), name="docs")# docs/ 폴더를 /docs 경로로 정적 파일 서빙 추가 
+app.mount("/docs", StaticFiles(directory=str(BASE_DIR / "docs")), name="docs")# docs/ 폴더를 /docs 경로로 정적 파일 서빙 추가
 
 
 @app.get("/health")

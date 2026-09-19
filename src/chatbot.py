@@ -36,11 +36,11 @@ print("1️⃣ 초기화 중...")
 if os.environ.get("LANGCHAIN_TRACING_V2") == "true":# LangSmith 트레이싱 활성화 여부 확인
     print(f"🔍 LangSmith 트레이싱 활성화 (프로젝트: {os.environ.get('LANGCHAIN_PROJECT')})")
 
-df = pd.read_csv("cleaned_onnuri.csv")
+df = pd.read_csv(current_dir.parent / "cleaned_onnuri.csv")
 
 embeddings = get_embeddings()
 vectorstore = Chroma(
-    persist_directory="vectordb/chroma_db",# 이렇게 쓰면 기존 DB 불러오기
+    persist_directory=str(current_dir.parent / "vectordb" / "chroma_db"),# 이렇게 쓰면 기존 DB 불러오기
     embedding_function=embeddings,
 )
 llm = get_llm(temperature=0.3)
