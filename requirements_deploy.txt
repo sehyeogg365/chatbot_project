@@ -8,12 +8,15 @@ uvicorn==0.47.0
 pydantic==2.12.5
 
 # ── 챗봇 / LLM (LangChain + Gemini) ─────────────────────
+# langchain-core 버전을 고정하면 langchain-google-genai(>=1.3.2 요구)와
+# 충돌하므로, 아래 langchain 계열은 버전 고정을 풀고 pip이 서로 호환되는
+# 버전을 알아서 맞추도록 둔다.
 python-dotenv==1.2.1
-langgraph==0.6.11
-langchain-core==1.2.4
-langchain-community==0.4.1
-langchain-google-genai==4.2.3
-langsmith==0.5.0
+langgraph
+langchain-core
+langchain-community
+langchain-google-genai
+langsmith
 sentence-transformers==5.6.0
 chromadb==1.3.7
 
