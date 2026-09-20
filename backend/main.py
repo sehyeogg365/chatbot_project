@@ -12,7 +12,10 @@ app = FastAPI(title="온누리 챗봇 API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Vite 개발 서버
+    allow_origins=[
+    "http://localhost:5173",
+    "https://chatbot-project-seven-ruddy.vercel.app",
+    ],  # Vite 개발 서버
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
