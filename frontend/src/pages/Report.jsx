@@ -12,6 +12,8 @@ const CATEGORIES = [
   '전체', '카페', '음식점', '자전거', '미용', '의류', '고기',
 ]
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function Report() {
   const [region,      setRegion]      = useState('전체')
   const [category,    setCategory]    = useState('전체')
@@ -32,7 +34,7 @@ export default function Report() {
     })
 
     try {
-      const res = await fetch(`/api/report?${params}`)
+      const res = await fetch(`${API_URL}/api/report?${params}`)
       if (!res.ok) {
         const json = await res.json().catch(() => ({}))
         throw new Error(json.detail || `서버 오류 (${res.status})`)

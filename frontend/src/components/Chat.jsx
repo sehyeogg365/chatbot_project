@@ -3,6 +3,8 @@ import styles from './Chat.module.css'
 
 const WELCOME = '안녕하세요! 온누리상품권 가맹점 안내 챗봇입니다.\n궁금한 가맹점이나 지역을 검색해보세요. 😊'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+
 export default function Chat() {
   const [messages, setMessages] = useState([
     { role: 'bot', text: WELCOME },
@@ -36,7 +38,7 @@ export default function Chat() {
     setLoading(true)
 
     try {
-      const res = await fetch('/api/chat', {
+      const res = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
